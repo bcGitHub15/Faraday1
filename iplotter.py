@@ -32,6 +32,7 @@ class IPlotter(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         manLayout0 = QVBoxLayout()
+        self.src = 
         '''
         #
         #   Top lines have settings and control buttons

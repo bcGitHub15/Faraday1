@@ -58,8 +58,7 @@ class ThreePlotWidget(QWidget):
         self.p2 = self.g2.plot(y=y)
         self.p3 = self.g3.plot(y=y)
 #        '''
-        self.show()
-        print(f'Created {self}')
+#        print(f'Created {self}')
 
     def clear(self):
         print('Clear sub plts')
@@ -68,3 +67,4 @@ class ThreePlotWidget(QWidget):
         self.p2.clear()
         self.p3.clear()
         '''
+        

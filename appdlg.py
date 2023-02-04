@@ -32,8 +32,6 @@ class AppDLG(QWidget):
         self.originalPalette = QApplication.palette()
         QApplication.setStyle(QStyleFactory.create('Fusion'))
         QApplication.setPalette(self.originalPalette)
-        
-        self.plotWin = ThreePlotWidget()
 
         print('Build dialog')
         self.win = QTabWidget()
@@ -41,7 +39,7 @@ class AppDLG(QWidget):
 
 
 #        tab1 = iplotter.IPlotter()
-        tab1 = rplotter.RPlotter(self.plotWin)
+        self.tab1 = rplotter.RPlotter()
         tab2 = QWidget()
         tab3 = QWidget()
 #        tab7 = configurator.Configurator(bmap)
@@ -54,7 +52,7 @@ class AppDLG(QWidget):
         self.setLayout(mainLayout)
 
         print('Built layout')
-        self.win.addTab(tab1, "Tab1")
+        self.win.addTab(self.tab1, "Live Plot")
         self.win.addTab(tab2, "Tab2")
         self.win.addTab(tab3, "Tab3")
 #        self.win.addTab(tab7, "Configure")
@@ -63,4 +61,5 @@ class AppDLG(QWidget):
     def closeEvent(self, evnt):
         print('Closing main dialog')
         super().closeEvent(evnt)
+        self.tab1.close()
         QApplication.quit()

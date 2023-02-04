@@ -30,11 +30,16 @@ from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
 #
 import iscan
 from threeplotwidget import ThreePlotWidget
+from faradaysource import FaradaySource
 
 class RPlotter(QWidget):
-    def __init__(self, pw: ThreePlotWidget, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plotter = pw
+        self.plotter = ThreePlotWidget()
+        self.showPlot = False
+        self.scan = None
+
+        self.src = FaradaySource(('Dev2/ai0', 'Dev2/ai2', 'Dev2/ai2'), 1000)
         manLayout0 = QVBoxLayout()
         #
         #   Top lines have settings and control buttons
@@ -58,17 +63,15 @@ class RPlotter(QWidget):
         line3 = QHBoxLayout()
         self.strtBtn = QPushButton("START")
         self.strtBtn.clicked.connect(self.on_click_start)
-#        self.pauseBtn = QPushButton("PAUSE")
-#        self.pauseBtn.setEnabled(False)
-#        self.pauseBtn.clicked.connect(self.on_click_pause)
         self.stopBtn = QPushButton("STOP")
         self.stopBtn.setEnabled(False)
         self.stopBtn.clicked.connect(self.on_click_stop)
-#        secLine.addWidget(rateLab)
-#        secLine.addWidget(self.rate)
+        self.closeBtn = QPushButton("Close Plot")
+        self.closeBtn.setEnabled(False)
+        self.closeBtn.clicked.connect(self.on_click_close)
         line3.addWidget(self.strtBtn)
-#        secLine.addWidget(self.pauseBtn)
         line3.addWidget(self.stopBtn)
+        line3.addWidget(self.closeBtn)
         #
         #   Next comes the live plot
         #
@@ -101,16 +104,22 @@ class RPlotter(QWidget):
 #        manLayout0.addLayout(botLine)
         self.setLayout(manLayout0)
 
+    def closeEvent(self, event):
+        print('Close rplotter')
+        self.plotter.hide()
+        self.plotter = None
+
     @pyqtSlot()
     def on_click_start(self):
-        print('Start scan')
+        print('Start pressed')
+        scan = iscan.IScan(self.src)
         self.plotter.clear()
-        scan = iscan.IScan()
         scan.sendPlotsTo(self.plotter)
+        self.plotter.show()
 
         self.strtBtn.setEnabled(False)
-        self.pauseBtn.setEnabled(True)
         self.stopBtn.setEnabled(True)
+        self.closeBtn.setEnabled(True)
 
         s_rate = int(self.rate.text())
 #        self.plotter.p3.setXRange(0.0, 1.0)
@@ -119,25 +128,28 @@ class RPlotter(QWidget):
         scan.startScan(s_rate)
         itn = 0
         while True:
-            scan.stepScan()
-            QApplication.processEvents()
-            if self.stopScan:
-#            if itn > 10:
-                break
-            print(itn)
-            itn += 1
-        self.strtBtn.setEnabled(True)
-        self.pauseBtn.setEnabled(False)
-        self.stopBtn.setEnabled(False)
-
-    @pyqtSlot()
-    def on_click_pause(self):
-        print('Pause scan')
+                scan.stepScan()
+                QApplication.processEvents()
+                if self.stopScan:
+                        print('Stop scan')
+                        break
+#                        print(itn)
+                itn += 1
+        print('Left scan loop')
+        self.scan = None
 
     @pyqtSlot()
     def on_click_stop(self):
         print('Stop scan')
         self.stopScan = True
+        self.strtBtn.setEnabled(True)
+        self.stopBtn.setEnabled(False)
+
+    @pyqtSlot()
+    def on_click_close(self):
+        print('Close plotter')
+        self.plotter.hide()
+        self.closeBtn.setEnabled(False)
 
     @pyqtSlot()
     def on_click_save(self):

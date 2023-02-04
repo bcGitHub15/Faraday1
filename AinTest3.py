@@ -13,10 +13,6 @@ Created on Tue Jan 31 13:24:18 2023
 
 @author: BCollett
 """
-import nidaqmx as ni
-from nidaqmx.constants import Edge
-#from nidaqmx.stream_readers import AnalogSingleChannelReader
-from nidaqmx.stream_readers import AnalogMultiChannelReader
 import numpy as np
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication
@@ -36,6 +32,7 @@ if __name__ == "__main__":
         mainWin = AppDLG()
         print('Main window complete')
         mainWin.resize(300, 800)
+        mainWin.move(100,100)
         print('Main window resized')
         mainWin.show()
         print('Main window shown')

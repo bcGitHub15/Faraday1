@@ -16,27 +16,24 @@ from datetime import datetime
 from PyQt5.QtWidgets import QApplication
 from pyqtgraph import PlotWidget, plot, setConfigOption
 #
-#   NI imports
+#   system imports
 #
-import nidaqmx as ni
-from nidaqmx.constants import Edge
-#from nidaqmx.stream_readers import AnalogSingleChannelReader
-from nidaqmx.stream_readers import AnalogMultiChannelReader
 import numpy as np
 #
 #   our imports
 #
+from voltagesource import VoltageSource
 from threeplotwidget import ThreePlotWidget
 
 class IScan():
-    def __init__(self):
-        self.board = 'Dev1'    # Should be set from config file
-        self.p = None
+    def __init__(self, src: VoltageSource):
+        self.src = src
+        self.plotter = None
         self.duration = 0.1      # Should be set from config
 
     def sendPlotsTo(self, threep: ThreePlotWidget):
         print(f'send plots to {threep}')
-        self.p = threep
+        self.plotter = threep
 
     
 #
@@ -59,64 +56,48 @@ class IScan():
         self.data = np.zeros((3, self.n_sample), dtype=np.float64)
         self.data[2,0]=10
         self.data[2,1] = -10
-        self.times = np.linspace(0.0, 1.0, self.n_sample)
+        self.times = np.linspace(0.0, self.duration, self.n_sample)
+        print(self.n_sample, self.times)
         self.data[0,:] = np.sin(2*np.pi*self.times)
         self.data[1,:] = np.sin(3*np.pi*self.times)
         self.data[2,:] = 5*np.sin(4*np.pi*self.times)
         print(self.times[:10])
         # Build the plots
-        if self.p:
+        if self.plotter:
+            self.plotter.g1.clear()
+            self.plotter.g2.clear()
+            self.plotter.g3.clear()
             print('Using live plotter')
-            self.line1 = self.p.g1.plot(x=self.times, y=self.data[0, :],
+            self.line1 = self.plotter.g1.plot(x=self.times, y=self.data[0, :],
                                                 name='V1', pen='b', 
                                                 symbol='o', symbolPen='b', 
                                                 symbolBrush='b',
                                                 symbolSize=2, pxMode=True)
-            self.line2 = self.p.g2.plot(self.times, self.data[1, :], 
+            self.line2 = self.plotter.g2.plot(self.times, self.data[1, :], 
                                                 name='V2', pen='g', 
                                                 symbol='o', symbolPen='g',
                                                 symbolBrush='g',
                                                 symbolSize=2, pxMode=True)
-            self.line3 = self.p.g3.plot(self.times, self.data[2, :],
+            self.line3 = self.plotter.g3.plot(self.times, self.data[2, :],
                                                 name='Vin', pen='r', 
                                                 symbol='o', symbolPen='r', 
                                                 symbolBrush='r',
                                                 symbolSize=2, pxMode=True)
         print('Start scan')
         
-        # Build the ni reader
-        self.task = ni.Task()
-        # Add the input channels. Set all to high voltage for now.
-        self.task.ai_channels.add_ai_voltage_chan("Dev2/ai0", 
-                                          max_val=10.0, min_val=-10.0)
-        self.task.ai_channels.add_ai_voltage_chan("Dev2/ai1", 
-                                          max_val=10.0, min_val=-10.0)
-        self.task.ai_channels.add_ai_voltage_chan("Dev2/ai2", 
-                                          max_val=10.0, min_val=-10.0)
-        # specify internal clocking at sample_rate
-        self.task.timing.cfg_samp_clk_timing(self.sample_rate,
-                                      active_edge=Edge.RISING,
-                                      samps_per_chan=self.n_sample)
-        self.reader = AnalogMultiChannelReader(self.task.in_stream)
-        
     
     def stepScan(self):
         #
         # Finally, we can actually run the scan.
         #
-        
-        self.task.start()
-        nread = self.reader.read_many_sample(self.data, 
-                                number_of_samples_per_channel=self.n_sample,
-                                timeout=2)
-        self.task.stop()
-        print(nread, self.data[2,:5])
+        self.data = self.src.readN(self.n_sample)
+        nread = int(len(self.data)/3)
+#        print(nread, self.data[2,:5])
         
         if nread > 0:
-            print('+')
-            if self.p:
-                self.line1.setData(self.times, 100*self.data[0, :])
-                self.line2.setData(self.times, 100*self.data[1, :])
+            if self.plotter:
+                self.line1.setData(self.times, self.data[0, :])
+                self.line2.setData(self.times, self.data[1, :])
                 self.line3.setData(self.times, self.data[2, :])
         else:
             print('Data read failed!')

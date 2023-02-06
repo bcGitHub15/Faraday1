@@ -64,6 +64,16 @@ class FWin(QMainWindow):
         print('Tidy up')
         self.contents.close()
 
+    def close(self):
+        print('Close Main window')
+        self.contents.close()
+
+    def closeEvent(self, evnt):
+        print('Main window closing')
+        self.close()
+        super().closeEvent(evnt)
+        QApplication.quit()
+
 
 #
 # Run as application.
@@ -80,3 +90,4 @@ if __name__ == '__main__':
         print('Quit with errors.')
     finally:
         mainWin.tidy_up()
+        sys.exit()

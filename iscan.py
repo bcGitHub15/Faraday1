@@ -55,16 +55,17 @@ class IScan():
         #   Note any previous data will be silently deleted.
         #
         self.sample_rate = int(rate)
-        self.n_sample = int(self.duration * self.sample_rate)
+        self.scan_rate = 100
+        self.n_sample = int(self.duration * self.scan_rate)
         self.data = np.zeros((3, self.n_sample), dtype=np.float64)
         self.data[2, 0] = 10
         self.data[2, 1] = -10
         self.times = np.linspace(0.0, self.duration, self.n_sample)
-        print(self.n_sample, self.times)
+#        print(self.n_sample, self.times)
         self.data[0, :] = np.sin(2*np.pi*self.times)
         self.data[1, :] = np.sin(3*np.pi*self.times)
         self.data[2, :] = 5*np.sin(4*np.pi*self.times)
-        print(self.times[:10])
+#        print(self.times[:10])
         # Build the plots
         if self.plotter:
             self.plotter.g1.clear()
@@ -95,14 +96,22 @@ class IScan():
         self._ngap = 10
         self._gap = np.zeros(self._ngap)
         self._glim = self.n_sample - self._ngap
+        self.rdTime = 0
+        self.calcTime = 0
+        self.plotTime = 0
+        self.cnt = 0
 
     def stepScan(self):
         #
         # Finally, we can actually run the scan.
         #
-        self.data = self.src.readOne()
+#        self.data = self.src.readOne()
+        t1 = time.monotonic()
+        self.data = self.src.readAvg(100)
+        t2 = time.monotonic()
         i = self.scanIndex
         ig = self.scanIndex + self._ngap
+        self.times[i] = t1 - self.startTime
         self.v1[i] = self.data[0]
         self.v2[i] = self.data[1]
         self.vb[i] = self.data[2]
@@ -113,6 +122,7 @@ class IScan():
         self.scanIndex += 1
         if self.scanIndex >= self.n_sample:
             self.scanIndex = 0
+            self.startTime = time.monotonic()
             self.v1[:self._ngap] = self._gap
             self.v2[:self._ngap] = self._gap
             self.vb[:self._ngap] = self._gap
@@ -122,6 +132,7 @@ class IScan():
         nread = int(len(self.data)/3)
 #        print(nread, self.data[2,:5])
         '''
+        t3 = time.monotonic()
         if nread > 0:
             if self.plotter:
                 '''
@@ -135,6 +146,15 @@ class IScan():
         else:
             print('Data read failed!')
             raise RuntimeError('Data read failed!')
+        t4 = time.monotonic()
+        self.rdTime += t2 - t1
+        self.calcTime += t3 - t2
+        self.plotTime += t4 - t3
+        self.cnt += 1
+
+    def dump(self):
+#        self.src.close()
+        print(f'Avg read {self.rdTime/self.cnt}, calc {self.calcTime/self.cnt}, plot {self.plotTime/self.cnt}')
 
     #
     #   Plot as a set of four graphs

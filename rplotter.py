@@ -32,7 +32,7 @@ import iscan
 from threeplotwidget import ThreePlotWidget
 from voltagesource import VoltageSource
 from faradaysource import FaradaySource
-# from nidaqmxsource import NidaqmxSource
+from nidaqmxsource import NidaqmxSource
 import bcwidgets
 from fconfig import FConfig
 
@@ -127,11 +127,18 @@ class RPlotter(QWidget):
             if self.stopScan:
                 print('Stop scan')
                 break
-#                        print(itn)
+#            print(itn)
             itn += 1
+            tend = t1 + 0.1
+            npass = 0
+            while time.monotonic() < tend:
+                npass+=1
+                pass
         execTime = time.monotonic() - startTime
         print(f'Left scan loop. {itn} steps took {execTime} s')
         print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
+        print(npass)
+        scan.dump()
         '''
             scan.stepScan()
             QApplication.processEvents()
@@ -177,6 +184,6 @@ class RPlotter(QWidget):
             return FaradaySource(ch_names, rate)
         print(full_names)
         if head.startswith('Dev'):
-            return FaradaySource(ch_names, rate)
-#            return NidaqmxSource(full_names, rate)
+#            return FaradaySource(ch_names, rate)
+            return NidaqmxSource(full_names, rate)
         return VoltageSource(ch_names, rate)

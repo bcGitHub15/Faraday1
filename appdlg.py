@@ -25,7 +25,7 @@ import rplotter
 from fconfig import FConfig
 
 
-class AppDLG(QWidget):
+class AppDLG(QDialog):
     def __init__(self, cfg: FConfig, parent=None):
         super().__init__(parent)
         print('Setup main Window')

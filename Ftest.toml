@@ -1,0 +1,19 @@
+MainXPos = 50
+MainYPos = 100
+MainWidth = 300
+MainHeight = 800
+GraphWidth = 900
+GraphHeight = 800
+
+[inputs]
+InDev = ""
+V1Chan = "ai0"
+V2Chan = "ai1"
+VBChan = "ai2"
+SampleRate = 10000
+LiveDuration = 10.0
+
+[outputs]
+OutDev = ""
+
+[graphing]

@@ -19,13 +19,14 @@ from PyQt5.QtGui import QStaticText
 #
 #   Mapper support imports
 #
-#import iplotter
+# import iplotter
 import rplotter
-from threeplotwidget import ThreePlotWidget
+# from threeplotwidget import ThreePlotWidget
+from fconfig import FConfig
 
 
 class AppDLG(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, cfg: FConfig, parent=None):
         super().__init__(parent)
         print('Setup main Window')
         self.setWindowTitle("Faraday Plotter")
@@ -37,9 +38,8 @@ class AppDLG(QWidget):
         self.win = QTabWidget()
         self.win.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored)
 
-
 #        tab1 = iplotter.IPlotter()
-        self.tab1 = rplotter.RPlotter()
+        self.tab1 = rplotter.RPlotter(cfg)
         tab2 = QWidget()
         tab3 = QWidget()
 #        tab7 = configurator.Configurator(bmap)
@@ -58,8 +58,12 @@ class AppDLG(QWidget):
 #        self.win.addTab(tab7, "Configure")
         print('added all tabs')
 
-    def closeEvent(self, evnt):
-        print('Closing main dialog')
-        super().closeEvent(evnt)
+    def close(self):
+        print('Main dialog closing')
         self.tab1.close()
+
+    def closeEvent(self, evnt):
+        print('Main dialog closing')
+        self.close()
+        super().closeEvent(evnt)
         QApplication.quit()

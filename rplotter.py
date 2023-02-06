@@ -12,107 +12,93 @@ interface.
 Created on 1/31/2023
 @author: bcollett
 """
+import time
 #
 #
 #   PyQt5 imports for the GUI
 #
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QFormLayout, QSpacerItem, QFileDialog)
-from PyQt5.QtGui import QStaticText
-from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
-from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
+# from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
+# from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
 #
 #   Support imports
 #
 import iscan
 from threeplotwidget import ThreePlotWidget
+from voltagesource import VoltageSource
 from faradaysource import FaradaySource
+# from nidaqmxsource import NidaqmxSource
+import bcwidgets
+from fconfig import FConfig
+
 
 class RPlotter(QWidget):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, cfg: FConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.cfg = cfg
         self.plotter = ThreePlotWidget()
+        self.plotter.resize(cfg.graphs_get('GraphWidth'),
+                            cfg.graphs_get('GraphHeight'))
         self.showPlot = False
         self.scan = None
 
-        self.src = FaradaySource(('Dev2/ai0', 'Dev2/ai2', 'Dev2/ai2'), 1000)
+        self.src = self._find_source(cfg)
         manLayout0 = QVBoxLayout()
         #
         #   Top lines have settings and control buttons
         #
-        line1 = QHBoxLayout()
-        rateLab = QLabel('Sample Rate (sps)')
-        self.rate = QLineEdit('10000')
-        line1.addWidget(rateLab)
-        line1.addWidget(self.rate)
-
-        line2 = QHBoxLayout()
-        durLab = QLabel('Duration (s)')
-        self.dur = QLineEdit('5.0')
-        line2.addWidget(durLab)
-        line2.addWidget(self.dur)
-#        u2Lab = QLabel('Unused')
-#        self.u2 = QLineEdit('0.2')
-#        topLine.addWidget(u2Lab)
-#        topLine.addWidget(self.u2)
-
+        self.rate = bcwidgets.NamedIntEdit('Sample Rate (sps)', 10_000)
+        self.dur = bcwidgets.NamedFloatEdit('Duration (s)', 10.0)
+        #
+        # Next line is for three buttons
+        #
         line3 = QHBoxLayout()
+        # START
         self.strtBtn = QPushButton("START")
         self.strtBtn.clicked.connect(self.on_click_start)
+        line3.addWidget(self.strtBtn)
+        # STOP
         self.stopBtn = QPushButton("STOP")
         self.stopBtn.setEnabled(False)
         self.stopBtn.clicked.connect(self.on_click_stop)
+        line3.addWidget(self.stopBtn)
+        # CLOSE
         self.closeBtn = QPushButton("Close Plot")
         self.closeBtn.setEnabled(False)
         self.closeBtn.clicked.connect(self.on_click_close)
-        line3.addWidget(self.strtBtn)
-        line3.addWidget(self.stopBtn)
         line3.addWidget(self.closeBtn)
-        #
-        #   Next comes the live plot
-        #
-#        vb = ViewBox(border=mkPen('b'))
-#        self.plotter = PlotWidget(viewBox=vb)
-#        self.plotter = ThreePlotWidget(self)
-#        self.plotter = ThreePlotWidget(parent_view=None)
-        '''
-        #
-        #   The description and the save button
-        #
-        botLine = QHBoxLayout()
-        self.desc = QLineEdit('')
-        self.saveBtn = QPushButton("SAVE SCAN")
-        self.saveBtn.setEnabled(False)
-        botLine.addWidget(self.saveBtn)
-        self.saveBtn.clicked.connect(self.on_click_save)
-        botLine.addWidget(self.desc)
-        botLine.addWidget(self.saveBtn)
-        '''
         #
         #   Assemble
         #
-        manLayout0.addLayout(line1)
-        manLayout0.addLayout(line2)
+        manLayout0.addLayout(self.rate.layout)
+        manLayout0.addLayout(self.dur.layout)
         manLayout0.addLayout(line3)
         manLayout0.addStretch()
-#        manLayout0.addLayout(topLine)
-#        manLayout0.addWidget(self.plotter)
-#        manLayout0.addLayout(botLine)
         self.setLayout(manLayout0)
 
-    def closeEvent(self, event):
+    def close(self):
         print('Close rplotter')
-        self.plotter.hide()
+        if self.plotter is not None:
+            self.plotter.hide()
         self.plotter = None
+        if self.scan is not None:
+            self.scan.close()
+        self.scan = None
+
+    def closeEvent(self, event):
+        print('rplotter closing')
+        self.close()
 
     @pyqtSlot()
     def on_click_start(self):
         print('Start pressed')
         scan = iscan.IScan(self.src)
+        scan.setDuration(self.cfg.inputs_get('LiveDuration'))
         self.plotter.clear()
         scan.sendPlotsTo(self.plotter)
         self.plotter.show()
@@ -121,21 +107,41 @@ class RPlotter(QWidget):
         self.stopBtn.setEnabled(True)
         self.closeBtn.setEnabled(True)
 
-        s_rate = int(self.rate.text())
+        s_rate = self.rate.value()
 #        self.plotter.p3.setXRange(0.0, 1.0)
 #        self.plotter.p3.setYRange(-10.0, 10.0)
         self.stopScan = False
         scan.startScan(s_rate)
         itn = 0
+        s_sums = 0
+        p_sums = 0
+        startTime = time.monotonic()
         while True:
-                scan.stepScan()
-                QApplication.processEvents()
-                if self.stopScan:
-                        print('Stop scan')
-                        break
+            t1 = time.monotonic()
+            scan.stepScan()
+            t2 = time.monotonic()
+            QApplication.processEvents()
+            t3 = time.monotonic()
+            s_sums += t2 - t1
+            p_sums += t3 - t2
+            if self.stopScan:
+                print('Stop scan')
+                break
 #                        print(itn)
-                itn += 1
+            itn += 1
+        execTime = time.monotonic() - startTime
+        print(f'Left scan loop. {itn} steps took {execTime} s')
+        print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
+        '''
+            scan.stepScan()
+            QApplication.processEvents()
+            if self.stopScan:
+                print('Stop scan')
+                break
+#                        print(itn)
+            itn += 1
         print('Left scan loop')
+        '''
         self.scan = None
 
     @pyqtSlot()
@@ -153,4 +159,24 @@ class RPlotter(QWidget):
 
     @pyqtSlot()
     def on_click_save(self):
-        print('Save scan')  
+        print('Save scan')
+
+#
+#   Internal helpers
+#
+    def _find_source(self, cfg: FConfig) -> VoltageSource:
+        rate = cfg.inputs_get('SampleRate')
+        head = cfg.inputs_get('InDev')
+        ch_names = [cfg.inputs_get('V1Chan'),
+                    cfg.inputs_get('V2Chan'),
+                    cfg.inputs_get('VBChan')]
+        full_names = ch_names
+        for i in range(3):
+            full_names[i] = head + '/' + ch_names[i]
+        if len(head) < 1:
+            return FaradaySource(ch_names, rate)
+        print(full_names)
+        if head.startswith('Dev'):
+            return FaradaySource(ch_names, rate)
+#            return NidaqmxSource(full_names, rate)
+        return VoltageSource(ch_names, rate)

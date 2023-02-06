@@ -13,15 +13,13 @@ Created on Tue Jan 31 13:24:18 2023
 
 @author: BCollett
 """
-import numpy as np
-import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication
 import sys
 from appdlg import AppDLG
 import traceback
 
 if __name__ == "__main__":
-    
+
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
@@ -32,7 +30,7 @@ if __name__ == "__main__":
         mainWin = AppDLG()
         print('Main window complete')
         mainWin.resize(300, 800)
-        mainWin.move(100,100)
+        mainWin.move(100, 100)
         print('Main window resized')
         mainWin.show()
         print('Main window shown')

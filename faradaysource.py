@@ -11,8 +11,9 @@ Rest return 0.
 """
 import numpy as np
 import time
+from voltagesource import VoltageSource
 
-class FaradaySource:
+class FaradaySource(VoltageSource):
     def __init__(self, chans, rate: int):
         # For moment chans should be a list or tuple of names
         for ch in chans:

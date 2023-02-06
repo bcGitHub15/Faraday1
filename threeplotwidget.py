@@ -27,13 +27,9 @@ class ThreePlotWidget(QWidget):
     def __init__(self, parent_view=None, *args, **kwargs):
 #        super().__init__(parent=parent_view, *args, **kwargs)
         super().__init__()
-        self.resize(900, 800)
+#        self.resize(900, 800)
         layout0 = QVBoxLayout()
-#        self.label = QLabel(f"Another Window {ThreePlotWidget.winCount}")
-#        ThreePlotWidget.winCount += 1
-#        layout0.addWidget(self.label)
         self.setLayout(layout0)
-#        '''
         setConfigOption('background', 'w')
         setConfigOption('foreground', 'k')
 

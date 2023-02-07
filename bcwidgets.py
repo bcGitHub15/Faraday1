@@ -15,7 +15,8 @@ Created on 2/4/2023
 #
 #   PyQt5 imports for the GUI
 #
-from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QWidget)
+from PyQt5.QtWidgets import (QHBoxLayout, QLabel, QLineEdit,
+                             QComboBox, QWidget)
 from PyQt5.QtCore import QRegExp
 from PyQt5.QtGui import QRegExpValidator
 
@@ -62,7 +63,7 @@ class NamedIntEdit(NamedEdit):
 
 # ******************************************************************
 #
-#   Variant of QLineEdit that only accepts floats and knows
+#   Variant of NamedEdit that only accepts floats and knows
 #   how to extract their values.
 #
 # ******************************************************************
@@ -76,3 +77,23 @@ class NamedFloatEdit(NamedEdit):
 
     def value(self):
         return float(self.box.text())
+
+# ******************************************************************
+#
+#   Widget that combines a comboBox and LineEdit.
+#   Returns string values.
+#
+# ******************************************************************
+class NamedCombo(QWidget):
+    def __init__(self, name: str, namelist: list):
+        print(f'Init NamedCombo({name}, {namelist})')
+        self.label = QLabel(name)
+        self.box = QComboBox()
+        self.box.addItems(namelist)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.box)
+
+    def value(self) -> int:
+        return self.box.currentIndex()
+

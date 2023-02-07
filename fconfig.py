@@ -21,7 +21,7 @@ class FConfig:
         self._inDict = {'InDev': 'Dev2'}
         self._inDict['V1Chan'] = 'ai0'
         self._inDict['V2Chan'] = 'ai1'
-        self._inDict['VBChan'] = 'ai2'
+        self._inDict['VMChan'] = 'ai2'
         self._inDict['SampleRate'] = 10_000
         self._inDict['LiveDuration'] = 10.0
         # outputs section
@@ -30,6 +30,7 @@ class FConfig:
         self._graphDict = {}
         self._graphDict['GraphWidth'] = 900
         self._graphDict['GraphHeight'] = 800
+        self._graphDict['UpdateRate'] = 10
         # main section
         self._config = {'inputs': self._inDict}
         self._config['outputs'] = self._outDict

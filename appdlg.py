@@ -23,6 +23,7 @@ from PyQt5.QtGui import QStaticText
 import rplotter
 # from threeplotwidget import ThreePlotWidget
 from fconfig import FConfig
+from configurator import Configurator
 
 
 class AppDLG(QDialog):
@@ -41,8 +42,7 @@ class AppDLG(QDialog):
 #        tab1 = iplotter.IPlotter()
         self.tab1 = rplotter.RPlotter(cfg)
         tab2 = QWidget()
-        tab3 = QWidget()
-#        tab7 = configurator.Configurator(bmap)
+        tab3 = Configurator(cfg)
         print('Built all tabs')
 
         mainLayout = QVBoxLayout()
@@ -54,8 +54,7 @@ class AppDLG(QDialog):
         print('Built layout')
         self.win.addTab(self.tab1, "Live Plot")
         self.win.addTab(tab2, "Tab2")
-        self.win.addTab(tab3, "Tab3")
-#        self.win.addTab(tab7, "Configure")
+        self.win.addTab(tab3, "Config")
         print('added all tabs')
 
     def close(self):

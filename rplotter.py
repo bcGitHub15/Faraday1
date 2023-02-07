@@ -52,8 +52,36 @@ class RPlotter(QWidget):
         #
         #   Top lines have settings and control buttons
         #
-        self.rate = bcwidgets.NamedIntEdit('Sample Rate (sps)', 10_000)
-        self.dur = bcwidgets.NamedFloatEdit('Duration (s)', 10.0)
+        oldSRate = cfg.inputs_get('SampleRate')
+        self.srate = bcwidgets.NamedIntEdit('Sample Rate (sps)', oldSRate)
+        manLayout0.addLayout(self.srate.layout)
+        #
+        oldDur =  cfg.inputs_get('LiveDuration')
+        self.dur = bcwidgets.NamedFloatEdit('Duration (s)', oldDur)
+        manLayout0.addLayout(self.dur.layout)
+        #
+        oldURate = cfg.graphs_get('UpdateRate')
+        self.urate = bcwidgets.NamedIntEdit('Graph update Rate (sps)',
+                                            oldURate)
+        manLayout0.addLayout(self.urate.layout)
+        #
+        oldNAvg = 100
+        self.navg = bcwidgets.NamedIntEdit('Number of samples to average per point',
+                                            oldNAvg)
+        manLayout0.addLayout(self.navg.layout)
+        #
+        # Select which traces to plot
+        #
+        traceNames = ('V1', 'V2', 'Vm', 'V1 - V2', 'v1 + v2', 'V1 - V2/v1 + v2')
+        self.trace1 = bcwidgets.NamedCombo('Plot 1 shows', traceNames)
+        self.trace1.box.setCurrentIndex(0)
+        manLayout0.addLayout(self.trace1.layout)
+        self.trace2 = bcwidgets.NamedCombo('Plot 2 shows', traceNames)
+        self.trace2.box.setCurrentIndex(1)
+        manLayout0.addLayout(self.trace2.layout)
+        self.trace3 = bcwidgets.NamedCombo('Plot 3 shows', traceNames)
+        self.trace3.box.setCurrentIndex(2)
+        manLayout0.addLayout(self.trace3.layout)
         #
         # Next line is for three buttons
         #
@@ -75,8 +103,6 @@ class RPlotter(QWidget):
         #
         #   Assemble
         #
-        manLayout0.addLayout(self.rate.layout)
-        manLayout0.addLayout(self.dur.layout)
         manLayout0.addLayout(line3)
         manLayout0.addStretch()
         self.setLayout(manLayout0)
@@ -98,20 +124,29 @@ class RPlotter(QWidget):
     def on_click_start(self):
         print('Start pressed')
         scan = iscan.IScan(self.src)
-        scan.setDuration(self.cfg.inputs_get('LiveDuration'))
+        # Get params from controls and send to scan
+        scan.setDuration(self.dur.value())
+        scan.setSampleRate(self.srate.value())
+        scan.setNAverage(self.navg.value())
+        # Clean plotter and connect to scan
         self.plotter.clear()
         scan.sendPlotsTo(self.plotter)
+        plots = [self.trace1.value(), self.trace2.value(), 
+                 self.trace3.value()]
+        print(f'plots = {plots}')
+        scan.plotInPanes(plots)
         self.plotter.show()
 
         self.strtBtn.setEnabled(False)
         self.stopBtn.setEnabled(True)
         self.closeBtn.setEnabled(True)
 
-        s_rate = self.rate.value()
+        u_rate = self.urate.value()
+        step_dur = 0.93 / u_rate   # Tuned at 10/sec
 #        self.plotter.p3.setXRange(0.0, 1.0)
 #        self.plotter.p3.setYRange(-10.0, 10.0)
         self.stopScan = False
-        scan.startScan(s_rate)
+        scan.startScan(u_rate)
         itn = 0
         s_sums = 0
         p_sums = 0
@@ -129,7 +164,7 @@ class RPlotter(QWidget):
                 break
 #            print(itn)
             itn += 1
-            tend = t1 + 0.1
+            tend = t1 + step_dur
             npass = 0
             while time.monotonic() < tend:
                 npass+=1
@@ -176,7 +211,7 @@ class RPlotter(QWidget):
         head = cfg.inputs_get('InDev')
         ch_names = [cfg.inputs_get('V1Chan'),
                     cfg.inputs_get('V2Chan'),
-                    cfg.inputs_get('VBChan')]
+                    cfg.inputs_get('VMChan')]
         full_names = ch_names
         for i in range(3):
             full_names[i] = head + '/' + ch_names[i]

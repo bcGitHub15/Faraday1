@@ -17,7 +17,7 @@ import numpy as np
 #
 #   system imports
 #
-import numpy as np
+#import numpy as np
 import time
 #
 #   our imports
@@ -27,10 +27,23 @@ from threeplotwidget import ThreePlotWidget
 
 
 class IScan():
+    plotNames = ['PD1 voltage (V)',
+                 'PD2 voltage (V)',
+                 'Modulation voltage (V)',
+                 'PD1 - PD2 (V)',
+                 'PD1 + PD2 (V)',
+                 '(PD1-PD2)/(PD1+PD2)']
     def __init__(self, src: VoltageSource):
         self.src = src
         self.plotter = None
-        self.duration = 0.1      # Should be set from config
+        self.duration = 0.1      # Will be reset when built
+        self.sampleRate = 100_000
+        self.update = 1
+        self.nAverage = 100
+        # These control what gets plotted in each pane
+        self.pane1 = 0
+        self.pane2 = 1
+        self.pane3 = 2
 
     def sendPlotsTo(self, threep: ThreePlotWidget):
         print(f'send plots to {threep}')
@@ -39,6 +52,40 @@ class IScan():
     def setDuration(self, time: float) -> None:
         self.duration = time
 
+    def setSampleRate(self, time: int) -> None:
+        self.sample_rate = time
+
+    def setUpdateRate(self, rate: int) -> None:
+        self.update_rate = time
+    
+    def setNAverage(self, nAvg: int) -> None:
+        self.nAverage = nAvg
+    
+    def plotInPane1(self, idx: int):
+        if idx > 5:
+            raise RuntimeError(f'Plot index {idx} out of range 0-5.')
+        print(f'Trace {idx} in pane 1')
+        self.pane1 = idx
+        self.plotter.g1.setLabel('left', IScan.plotNames[idx])
+
+    def plotInPane2(self, idx: int):
+        if idx > 5:
+            raise RuntimeError(f'Plot index {idx} out of range 0-5.')
+        print(f'Trace {idx} in pane 2')
+        self.pane2 = idx
+        self.plotter.g2.setLabel('left', IScan.plotNames[idx])
+
+    def plotInPane3(self, idx: int):
+        if idx > 5:
+            raise RuntimeError(f'Plot index {idx} out of range 0-5.')
+        print(f'Trace {idx} in pane 3')
+        self.pane3 = idx
+        self.plotter.g3.setLabel('left', IScan.plotNames[idx])
+
+    def plotInPanes(self, indices):
+        self.plotInPane1(indices[0])
+        self.plotInPane2(indices[1])
+        self.plotInPane3(indices[2])
     #
     #   A scan broken up into steps for live use.
     #
@@ -49,14 +96,13 @@ class IScan():
     #   NOTE that the number of steps is the number of times that the
     #   mapper moves. The complete scan will have n_step + 1 measurements.
     #
-    def startScan(self, rate: int):
+    def startScan(self, update_rate: int):
         #
         #   Validate state and arguments.
         #   Note any previous data will be silently deleted.
         #
-        self.sample_rate = int(rate)
-        self.scan_rate = 100
-        self.n_sample = int(self.duration * self.scan_rate)
+        self.update_rate = update_rate
+        self.n_sample = int(self.duration * self.update_rate)
         self.data = np.zeros((3, self.n_sample), dtype=np.float64)
         self.data[2, 0] = 10
         self.data[2, 1] = -10
@@ -91,11 +137,17 @@ class IScan():
         self.scanIndex = 1
         self.v1 = np.zeros(self.n_sample)
         self.v2 = np.zeros(self.n_sample)
-        self.vb = np.zeros(self.n_sample)
+        self.vm = np.zeros(self.n_sample)
+        self.v1mv2 = np.zeros(self.n_sample)
+        self.v1pv2 = np.zeros(self.n_sample)
+        self.div = np.zeros(self.n_sample)
+        self.traces = (self.v1, self.v2, self.vm, 
+                       self.v1mv2, self.v1pv2, self.div)
         self.startTime = time.monotonic()
-        self._ngap = 10
-        self._gap = np.zeros(self._ngap)
+        self._ngap = 5
         self._glim = self.n_sample - self._ngap
+
+        self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
         self.rdTime = 0
         self.calcTime = 0
         self.plotTime = 0
@@ -105,27 +157,38 @@ class IScan():
         #
         # Finally, we can actually run the scan.
         #
-#        self.data = self.src.readOne()
+        #        self.data = self.src.readOne()
         t1 = time.monotonic()
-        self.data = self.src.readAvg(100)
+        self.data = self.src.readAvg(self.nAverage)
         t2 = time.monotonic()
         i = self.scanIndex
         ig = self.scanIndex + self._ngap
         self.times[i] = t1 - self.startTime
         self.v1[i] = self.data[0]
         self.v2[i] = self.data[1]
-        self.vb[i] = self.data[2]
+        self.vm[i] = self.data[2]
+        self.v1mv2[i] = self.data[0]-self.data[1]
+        self.v1pv2[i] = self.data[0]+self.data[1]
+        self.div[i] = self.v1mv2[i]-self.v1pv2[i]
         if self.scanIndex < self._glim:
-            self.v1[ig] = 0.0
-            self.v2[ig] = 0.0
-            self.vb[ig] = 0.0
+            for i in range(6):
+                self.traces[i][ig] = self.gvals[i]
+
+#            self.v1[ig] = self.gval1
+#            self.v2[ig] = self.gval2
+#            self.vm[ig] = self.gval3
         self.scanIndex += 1
-        if self.scanIndex >= self.n_sample:
+        if self.scanIndex >= self.n_sample:  # End of graph, reset
+#            self.gvals[0] = np.average(self.v1[:-5])
+#            self.gvals[1] = np.average(self.v2[:-5])
             self.scanIndex = 0
             self.startTime = time.monotonic()
-            self.v1[:self._ngap] = self._gap
-            self.v2[:self._ngap] = self._gap
-            self.vb[:self._ngap] = self._gap
+            for i in range(6):
+                self.gvals[i] = np.average(self.traces[i][:-5])
+                self.traces[i][:self._ngap] = self.gvals[i]
+#            self.v1[:self._ngap] = self.gval1
+#            self.v2[:self._ngap] = self.gval2
+#            self.vb[:self._ngap] = self.gval3
         nread = 1
         '''
         self.data = self.src.readN(self.n_sample)
@@ -140,9 +203,9 @@ class IScan():
                 self.line2.setData(self.times, self.data[1, :])
                 self.line3.setData(self.times, self.data[2, :])
                 '''
-                self.line1.setData(self.times, self.v1)
-                self.line2.setData(self.times, self.v2)
-                self.line3.setData(self.times, self.vb)
+                self.line1.setData(self.times, self.traces[self.pane1])
+                self.line2.setData(self.times, self.traces[self.pane2])
+                self.line3.setData(self.times, self.traces[self.pane3])
         else:
             print('Data read failed!')
             raise RuntimeError('Data read failed!')

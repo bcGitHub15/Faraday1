@@ -21,13 +21,18 @@ from PyQt5.QtGui import QStaticText
 #
 from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
 from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
+#
+#   Our imports
+#
+#from windowcontroller import WindowController
 
 class ThreePlotWidget(QWidget):
     winCount = 0
-    def __init__(self, parent_view=None, *args, **kwargs):
+#    def __init__(self, contr: WindowController=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
 #        super().__init__(parent=parent_view, *args, **kwargs)
         super().__init__()
-#        self.resize(900, 800)
+#        self.controller = contr
         layout0 = QVBoxLayout()
         self.setLayout(layout0)
         setConfigOption('background', 'w')
@@ -63,4 +68,10 @@ class ThreePlotWidget(QWidget):
         self.p2.clear()
         self.p3.clear()
         '''
+    
+    def closeEvent(self, evnt):
+        print('Graph window closing')
+#        if self.controller is not None:
+#            self.controller.childClosing()
+
         

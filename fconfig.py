@@ -37,7 +37,7 @@ class FConfig:
         self._config['graphing'] = self._graphDict
         self._config['MainXPos'] = 50
         self._config['MainYPos'] = 100
-        self._config['MainWidth'] = 300
+        self._config['MainWidth'] = 250
         self._config['MainHeight'] = 800
 
     def get(self, key):
@@ -51,6 +51,21 @@ class FConfig:
 
     def graphs_get(self, key):
         return self._graphDict[key]
+
+    def set(self, key, value):
+        self._config[key] = value
+
+    def inputs_set(self, key, value):
+#        print(key, self._inDict[key])
+        self._inDict[key] = value
+#        print(key, self._inDict[key])
+#        print('inputs_set _indict=', self._inDict)
+
+    def outputs_set(self, key, value):
+        self._outDict[key] = value
+
+    def graphs_set(self, key, value):
+        self._graphDict[key] = value
 
     def __str__(self):
         return "Faraday Config"

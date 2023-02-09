@@ -97,3 +97,6 @@ class NamedCombo(QWidget):
     def value(self) -> int:
         return self.box.currentIndex()
 
+    def text(self) -> int:
+        return self.box.currentText()
+

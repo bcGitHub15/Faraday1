@@ -134,7 +134,7 @@ class IScan():
                                               symbolBrush='r',
                                               symbolSize=2, pxMode=True)
         print('Start scan')
-        self.scanIndex = 1
+        self.scanIndex = 0
         self.v1 = np.zeros(self.n_sample)
         self.v2 = np.zeros(self.n_sample)
         self.vm = np.zeros(self.n_sample)
@@ -153,7 +153,8 @@ class IScan():
         self.plotTime = 0
         self.cnt = 0
 
-    def stepScan(self):
+    def stepScan(self) -> bool:
+        graph_end = False
         #
         # Finally, we can actually run the scan.
         #
@@ -179,16 +180,25 @@ class IScan():
 #            self.vm[ig] = self.gval3
         self.scanIndex += 1
         if self.scanIndex >= self.n_sample:  # End of graph, reset
-#            self.gvals[0] = np.average(self.v1[:-5])
+#            print(self.times)
+#            print('')
+            graph_end = True
+            mx1 = np.max(self.traces[self.pane1])
+            mn1 = np.min(self.traces[self.pane1])
+            r1 = 1.25*(mx1-mn1)
+            a1 = 0.5*(mx1+mn1)
+            self.plotter.g1.setYRange(a1-r1, a1+r1)
+            mx2 = np.max(self.traces[self.pane2])
+            mn2 = np.min(self.traces[self.pane2])
+            r2 = 1.25*(mx2-mn2)
+            a2 = 0.5*(mx2+mn2)
+            self.plotter.g2.setYRange(a2-r2, a2+r2)
 #            self.gvals[1] = np.average(self.v2[:-5])
             self.scanIndex = 0
             self.startTime = time.monotonic()
             for i in range(6):
                 self.gvals[i] = np.average(self.traces[i][:-5])
                 self.traces[i][:self._ngap] = self.gvals[i]
-#            self.v1[:self._ngap] = self.gval1
-#            self.v2[:self._ngap] = self.gval2
-#            self.vb[:self._ngap] = self.gval3
         nread = 1
         '''
         self.data = self.src.readN(self.n_sample)
@@ -214,6 +224,7 @@ class IScan():
         self.calcTime += t3 - t2
         self.plotTime += t4 - t3
         self.cnt += 1
+        return graph_end
 
     def dump(self):
 #        self.src.close()

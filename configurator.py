@@ -35,6 +35,7 @@ from fconfig import FConfig
 class Configurator(QWidget):
     def __init__(self, cfg: FConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.cfg = cfg
         #
         # System parameters
         #
@@ -72,22 +73,19 @@ class Configurator(QWidget):
         inputLayout.addRow('Input device', self.inDev)
         # Voltage 1 input
         self.inV1 = QComboBox()
-        for d in self.chanList:
-            self.inV1.insertItem(i, d)
+        self.inV1.addItems(self.chanList)
         self.inV1.setCurrentIndex(self.chanList.index(cfg.inputs_get('V1Chan')))
         inputLayout.addRow('PD1 voltage channel', self.inV1)
         self.srate = QLineEdit(str(cfg.inputs_get('SampleRate')))
         # Voltage 2 input
         self.inV2 = QComboBox()
-        for d in self.chanList:
-            self.inV2.insertItem(i, d)
+        self.inV2.addItems(self.chanList)
         self.inV2.setCurrentIndex(self.chanList.index(cfg.inputs_get('V2Chan')))
         inputLayout.addRow('PD2 voltage channel', self.inV2)
         self.srate = QLineEdit(str(cfg.inputs_get('SampleRate')))
         # Modulation voltage input
         self.inVm = QComboBox()
-        for d in self.chanList:
-            self.inVm.insertItem(i, d)
+        self.inVm.addItems(self.chanList)
         self.inVm.setCurrentIndex(self.chanList.index(cfg.inputs_get('VMChan')))
         inputLayout.addRow('Modulation voltage channel', self.inVm)
         # Params
@@ -115,9 +113,9 @@ class Configurator(QWidget):
         #
         graphPanel = QGroupBox('Graphing parameters')
         graphLayout = QFormLayout()
-        self.gwText = QLineEdit(str(cfg.get('GraphWidth')))
+        self.gwText = QLineEdit(str(cfg.graphs_get('GraphWidth')))
         graphLayout.addRow('Graph window width', self.gwText)
-        self.ghText = QLineEdit(str(cfg.get('GraphHeight')))
+        self.ghText = QLineEdit(str(cfg.graphs_get('GraphHeight')))
         graphLayout.addRow('Graph window height', self.ghText)
         self.urate = QLineEdit(str(cfg.graphs_get('UpdateRate')))
         graphLayout.addRow('Graph update rate (sps)', self.urate)
@@ -135,19 +133,48 @@ class Configurator(QWidget):
         #
         # Build whole system
         #
-        leftLayout = QVBoxLayout()
-        leftLayout.addWidget(sysPanel)
-        leftLayout.addWidget(inputPanel)
-        leftLayout.addWidget(outputPanel)
-        leftLayout.addWidget(graphPanel)
+        configLayout = QVBoxLayout()
+        configLayout.addWidget(sysPanel)
+        configLayout.addWidget(inputPanel)
+        configLayout.addWidget(outputPanel)
+        configLayout.addWidget(graphPanel)
+        configLayout.addLayout(btnLayout)
         vSpace = QSpacerItem(20, 40, QSizePolicy.Minimum,
                                      QSizePolicy.Expanding)
-        leftLayout.addItem(vSpace)
-        configLayout = QHBoxLayout()
-        configLayout.addLayout(leftLayout)
-        configLayout.addLayout(btnLayout)
+        configLayout.addItem(vSpace)
         self.setLayout(configLayout)
+
+    def update(self):
+        # Work through all the fields and copy values into config
+        self.cfg.set('MainXPos', int(self.mxText.text()))
+        self.cfg.set('MainYPos', int(self.myText.text()))
+        self.cfg.set('MainWidth', int(self.mwText.text()))
+        self.cfg.set('MainHeight', int(self.mhText.text()))
+        # Inputs
+        self.cfg.inputs_set('InDev', 'testText')
+#        print(self.cfg._config['inputs'])
+        fullDev =  self.inDev.currentText()
+        devs = fullDev.split(' ')
+#        print('InDev ', devs[0])
+        self.cfg.inputs_set('InDev', devs[0])
+#        print(self.cfg._config['inputs'])
+#        print(self.cfg._config, self.cfg._config['inputs'])
+        self.cfg.inputs_set('V1Chan', self.inV1.currentText())
+        self.cfg.inputs_set('V2Chan', self.inV2.currentText())
+        self.cfg.inputs_set('VMChan', self.inVm.currentText())
+        self.cfg.inputs_set('SampleRate', int(self.srate.text()))
+        self.cfg.inputs_set('LiveDuration', float(self.dur.text()))
+        # Outputs
+        self.cfg.outputs_set('OutDev', self.outDev.currentText())
+        # Graphing
+        self.cfg.graphs_set('MainWidth', int(self.gwText.text()))
+        self.cfg.graphs_set('MainHeight', int(self.ghText.text()))
+        self.cfg.graphs_set('UpdateRate', int(self.urate.text()))
+
 
     @pyqtSlot()
     def on_click(self, proceed: bool):
         print(f"Close config, accept = {proceed}.")
+        if proceed:
+            self.update()
+            self.cfg.saveOn('FTest.toml')

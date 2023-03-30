@@ -11,6 +11,8 @@ interface.
 
 Created on 1/31/2023
 @author: bcollett
+
+Modifier 3/30/23 Add support for a Fourier data collection section.
 """
 import numpy as np
 import time
@@ -23,6 +25,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
         QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
         QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
+        QFrame,
         QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
         QVBoxLayout, QWidget, QFormLayout, QSpacerItem, QFileDialog)
 # from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
@@ -105,10 +108,41 @@ class RPlotter(QWidget):
         self.saveBtn.setEnabled(False)
         self.saveBtn.clicked.connect(self.on_click_save)
         line3.addWidget(self.saveBtn)
+        manLayout0.addLayout(line3)
+        #
+        #   Start a Fourier section
+        #
+        fsec = QLabel('Fourier Data Collect')
+        fsec.setFrameStyle(QFrame.Panel | QFrame.Raised)
+        manLayout0.addWidget(fsec)
+        #
+        #   Top lines have settings and control buttons
+        #
+        oldfSRate = self.srate.value()
+        self.fsrate = bcwidgets.NamedIntEdit('Fourier Sample Rate (sps)', oldfSRate)
+        manLayout0.addLayout(self.fsrate.layout)
+        #
+        oldfDur =  self.dur.value()
+        self.fdur = bcwidgets.NamedFloatEdit('Data Duration (s)', oldfDur)
+        manLayout0.addLayout(self.fdur.layout)
+        #
+        # Last line is for collect and save buttons
+        #
+        fline = QHBoxLayout()
+        # START
+        self.fstrtBtn = QPushButton("COLLECT")
+        self.fstrtBtn.clicked.connect(self.on_click_fstart)
+        fline.addWidget(self.fstrtBtn)
+        # SAVE
+        self.fsaveBtn = QPushButton("Save Fourier Data")
+        self.fsaveBtn.setEnabled(False)
+        self.fsaveBtn.clicked.connect(self.on_click_fsave)
+        fline.addWidget(self.fsaveBtn)
+        manLayout0.addLayout(fline)
+        #
         #
         #   Assemble
         #
-        manLayout0.addLayout(line3)
         manLayout0.addStretch()
         self.setLayout(manLayout0)
 
@@ -213,6 +247,14 @@ class RPlotter(QWidget):
             fname = self._unique_file_name()
             print(f'Save data to {fname}')
             self.scan.saveTo(fname)
+
+    @pyqtSlot()
+    def on_click_fstart(self):
+        print('Collect Fourier pressed')
+
+    @pyqtSlot()
+    def on_click_fsave(self):
+        print('Save Fourier pressed')
 
 #
 #   Internal helpers

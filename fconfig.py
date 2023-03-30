@@ -3,14 +3,11 @@
 """
 fconfig.py
 Faraday
-
 This implements a TOML configuration file for the FieldMapper.
 FConfig holds dictionaries of configuration values that can be accessed
 by the application. It is intended that all potentially alterable
 configuration be stored in here.
-
 Created on Tue Aug 16 11:40:48 2022
-
 @author: bcollett
 """
 import toml

@@ -2,6 +2,7 @@ MainXPos = 50
 MainYPos = 100
 MainWidth = 300
 MainHeight = 800
+DataPrefix = "FData"
 
 [inputs]
 InDev = ""

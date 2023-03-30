@@ -14,6 +14,7 @@ Created on 1/31/2023
 """
 import numpy as np
 import time
+from datetime import datetime
 #
 #
 #   PyQt5 imports for the GUI
@@ -99,13 +100,11 @@ class RPlotter(QWidget):
         self.stopBtn.setEnabled(False)
         self.stopBtn.clicked.connect(self.on_click_stop)
         line3.addWidget(self.stopBtn)
-        # CLOSE
-        '''
-        self.closeBtn = QPushButton("Close Plot")
-        self.closeBtn.setEnabled(False)
-        self.closeBtn.clicked.connect(self.on_click_close)
-        line3.addWidget(self.closeBtn)
-        '''
+        # SAVE
+        self.saveBtn = QPushButton("Save Data")
+        self.saveBtn.setEnabled(False)
+        self.saveBtn.clicked.connect(self.on_click_save)
+        line3.addWidget(self.saveBtn)
         #
         #   Assemble
         #
@@ -127,29 +126,29 @@ class RPlotter(QWidget):
         self.close()
     
     def childClosing(self):
-        self.closeBtn.setEnabled(False)
+        self.saveBtn.setEnabled(False)
         self.showPlot = False
 
     @pyqtSlot()
     def on_click_start(self):
         print('Start pressed')
-        scan = iscan.IScan(self.src)
+        self.scan = iscan.IScan(self.src)
         # Get params from controls and send to scan
-        scan.setDuration(self.dur.value())
-        scan.setSampleRate(self.srate.value())
-        scan.setNAverage(self.navg.value())
+        self.scan.setDuration(self.dur.value())
+        self.scan.setSampleRate(self.srate.value())
+        self.scan.setNAverage(self.navg.value())
         # Clean plotter and connect to scan
         self.plotter.clear()
-        scan.sendPlotsTo(self.plotter)
+        self.scan.sendPlotsTo(self.plotter)
         plots = [self.trace1.value(), self.trace2.value(), 
                  self.trace3.value()]
         print(f'plots = {plots}')
-        scan.plotInPanes(plots)
+        self.scan.plotInPanes(plots)
         self.plotter.show()
 
         self.strtBtn.setEnabled(False)
         self.stopBtn.setEnabled(True)
-#        self.closeBtn.setEnabled(True)
+        self.saveBtn.setEnabled(False)
 
         u_rate = self.urate.value()
         step_dur = 0.93 / u_rate   # Tuned at 10/sec
@@ -159,7 +158,7 @@ class RPlotter(QWidget):
         self.plotter.g2.setYRange(0.0, 0.2)
         self.plotter.g3.setYRange(-5.5, 5.5)
         self.stopScan = False
-        scan.startScan(u_rate)
+        self.scan.startScan(u_rate)
         itn = 0
         s_sums = 0
         p_sums = 0
@@ -183,71 +182,17 @@ class RPlotter(QWidget):
    #             t1 = get_time()
                 while get_time() < step_times[step_idx]:
                     pass
-                graph_end = scan.stepScan()
-  #              t2 = get_time()
+                graph_end = self.scan.stepScan()
+#                t2 = get_time()
                 QApplication.processEvents()
- #               t3 = get_time()
+#                t3 = get_time()
                 if self.stopScan:
                     running = False
                     break
-#                print(t2-t1, t3-t2, t3-t1)
-                
-        '''
-        #
-        # Time trackers
-        #
-        t_track = [0] * 10
-        t_idx = 0
-        while True:
-            t1 = get_time()
-            graph_end = scan.stepScan()
-            t2 = get_time()
-            QApplication.processEvents()
-            t3 = get_time()
-            s_sums += t2 - t1
-            p_sums += t3 - t2
-            if self.stopScan:
-                print('Stop scan')
-                break
-#            print(itn)
-            itn += 1
-            tend = t1 + step_dur
-            t0 = 0
-            while True:
-                tf = get_time()
-                if tf >= tend:
-                    break
-#                if tf != t0:
-#                    t_track[t_idx] = tf
-#                    t0 = tf
-#                    t_idx+=1
-#                    if t_idx > 9:
-#                        t_idx = 0
-            tf = get_time()
-#            if graph_end:
-            print(t1, tend-t1, tf-t1, step_dur)
-        '''
-        '''
-        for i in range(10):
-            print(t_track[i])
-        for i in range(9):
-            print(t_track[i+1]-t_track[i])
-        '''
         execTime = (get_time() - start_time) / time_1s
-        print(f'Left scan loop. {itn} steps took {execTime} s')
-        print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
-        scan.dump()
-        '''
-            scan.stepScan()
-            QApplication.processEvents()
-            if self.stopScan:
-                print('Stop scan')
-                break
-#                        print(itn)
-            itn += 1
-        print('Left scan loop')
-        '''
-        self.scan = None
+#        print(f'Left scan loop. {itn} steps took {execTime} s')
+#        print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
+        self.scan.dump()
 
     @pyqtSlot()
     def on_click_stop(self):
@@ -255,16 +200,19 @@ class RPlotter(QWidget):
         self.stopScan = True
         self.strtBtn.setEnabled(True)
         self.stopBtn.setEnabled(False)
+        self.saveBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_click_close(self):
         print('Close plotter')
         self.plotter.hide()
-#        self.closeBtn.setEnabled(False)
 
     @pyqtSlot()
     def on_click_save(self):
-        print('Save scan')
+        if self.scan is not None:
+            fname = self._unique_file_name()
+            print(f'Save data to {fname}')
+            self.scan.saveTo(fname)
 
 #
 #   Internal helpers
@@ -285,3 +233,10 @@ class RPlotter(QWidget):
 #            return FaradaySource(ch_names, rate)
             return NidaqmxSource(full_names, rate)
         return VoltageSource(ch_names, rate)
+
+    def _unique_file_name(self) -> str:
+        dstr = datetime.today().strftime('%m%d%y-%M%H')
+        root = self.cfg.get('DataPrefix')
+        return f'{root}{dstr}.csv'
+        
+        

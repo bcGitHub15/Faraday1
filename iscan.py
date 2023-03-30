@@ -170,7 +170,7 @@ class IScan():
         self.vm[i] = self.data[2]
         self.v1mv2[i] = self.data[0]-self.data[1]
         self.v1pv2[i] = self.data[0]+self.data[1]
-        self.div[i] = self.v1mv2[i]-self.v1pv2[i]
+        self.div[i] = self.v1mv2[i]/self.v1pv2[i]
         if self.scanIndex < self._glim:
             for i in range(6):
                 self.traces[i][ig] = self.gvals[i]
@@ -193,12 +193,18 @@ class IScan():
             r2 = 1.25*(mx2-mn2)
             a2 = 0.5*(mx2+mn2)
             self.plotter.g2.setYRange(a2-r2, a2+r2)
+            mx3 = np.max(self.traces[self.pane3])
+            mn3 = np.min(self.traces[self.pane3])
+            r3 = 1.25*(mx3-mn3)
+            a3 = 0.5*(mx3+mn3)
+            self.plotter.g3.setYRange(a3-r3, a3+r3)
 #            self.gvals[1] = np.average(self.v2[:-5])
             self.scanIndex = 0
             self.startTime = time.monotonic()
             for i in range(6):
                 self.gvals[i] = np.average(self.traces[i][:-5])
                 self.traces[i][:self._ngap] = self.gvals[i]
+            print(f'Average V1={self.gvals[0]:.5f}, V2={self.gvals[1]:.5f}')
         nread = 1
         '''
         self.data = self.src.readN(self.n_sample)
@@ -242,6 +248,15 @@ class IScan():
     #
     def _plotOn(self, axis, array, errors, name='B Field'):
         pass
+    
+    #
+    #   Send data in text form to a .csv file
+    #
+    def saveTo(self, fname: str):
+        darray = np.stack((self.times, self.v1, self.v2, self.vm,
+                           self.v1mv2, self.v1pv2, self.div), axis=1)
+        hdr = 't,V1,V2,Vm,V1-V2,V1+V2,Vdiv'
+        np.savetxt(fname, darray, header=hdr, delimiter=', ')
 
     def close(self):
         print('Close iscan')

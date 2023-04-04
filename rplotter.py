@@ -165,65 +165,8 @@ class RPlotter(QWidget):
     @pyqtSlot()
     def on_click_start(self):
         print('Start pressed')
-        self.scan = iscan.IScan(self.src)
-        # Get params from controls and send to scan
-        self.scan.setDuration(self.dur.value())
-        self.scan.setSampleRate(self.srate.value())
-        self.scan.setNAverage(self.navg.value())
-        # Clean plotter and connect to scan
-        self.plotter.clear()
-        self.scan.sendPlotsTo(self.plotter)
-        plots = [self.trace1.value(), self.trace2.value(),
-                 self.trace3.value()]
-        print(f'plots = {plots}')
-        self.scan.plotInPanes(plots)
-        self.plotter.show()
-
-        self.strtBtn.setEnabled(False)
-        self.stopBtn.setEnabled(True)
-        self.saveBtn.setEnabled(False)
-
-        u_rate = self.urate.value()
-        step_dur = 0.93 / u_rate   # Tuned at 10/sec
-        print(f'Step duration {step_dur}')
-#        self.plotter.p3.setXRange(0.0, 1.0)
-        self.plotter.g1.setYRange(0.0, 0.2)
-        self.plotter.g2.setYRange(0.0, 0.2)
-        self.plotter.g3.setYRange(-5.5, 5.5)
-        self.stopScan = False
-        self.scan.startScan(u_rate)
-
-        get_time = time.time
-        # time_1s = 1
-        # start_time = get_time()
-        # step_dur = time_1s / u_rate
-        n_point = int(self.dur.value() * self.urate.value())
-        print(self.dur.value(), self.urate.value(), n_point)
-        raw_step_times = np.linspace(0, self.dur.value(), n_point)
-        # print(raw_step_times[:5])
-        # print(raw_step_times[-5:])
-        step_idx = 0
-        running = True
-        while running:
-            t0 = get_time()
-            step_times = raw_step_times + t0
-            for step_idx in range(n_point):
-                # t1 = get_time()
-                while get_time() < step_times[step_idx]:
-                    pass
-                # graph_end = self.scan.stepScan()
-                self.scan.stepScan()
-#                t2 = get_time()
-                QApplication.processEvents()
-#                t3 = get_time()
-                if self.stopScan:
-                    running = False
-                    break
-        # execTime = (get_time() - start_time) / time_1s
-        # print(f'Left scan loop. {itn} steps took {execTime} s')
-        # print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
-        self.scan.dump()
-
+        self._do_scan(True)
+        
     @pyqtSlot()
     def on_click_stop(self):
         print('Stop scan')
@@ -247,10 +190,14 @@ class RPlotter(QWidget):
     @pyqtSlot()
     def on_click_fstart(self):
         print('Collect Fourier pressed')
+        self._do_scan(False)
+        self.fsaveBtn.setEnabled(True)
+        self.saveBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_click_fsave(self):
         print('Save Fourier pressed')
+        self._do_fourier()
 
 #
 #   Internal helpers
@@ -282,3 +229,87 @@ class RPlotter(QWidget):
         dstr = datetime.today().strftime('%m%d%y-%M%H')
         root = self.cfg.get('DataPrefix')
         return f'{root}{dstr}.csv'
+
+    #
+    # _do_fourier does just what you think.
+    #
+    def _do_fourier(self):
+        if self.scan is None:
+            print('There are no current scan data.')
+            return
+        #
+        # Work through the 6 data arrays
+        #
+        self.fv1 = np.absolute(np.fft.rfft(self.scan.v1))
+        print(self.fv1[:20])
+        self.fv2 = np.absolute(np.fft.rfft(self.scan.v2))
+        print(self.fv2[:20])
+        self.fvm = np.absolute(np.fft.rfft(self.scan.vm))
+        print(self.fvm[:20])
+        self.fv1mv2 = np.absolute(np.fft.rfft(self.scan.v1mv2))
+        print(self.fv1mv2[:20])
+        self.fv1pv2 = np.absolute(np.fft.rfft(self.scan.v1pv2))
+        print(self.fv1pv2[:20])
+        self.fdiv = np.absolute(np.fft.rfft(self.scan.div))
+        print(self.fdiv[:20])
+    #
+    # _do_scan actually takes the data and maintains the plots.
+    # It takes one argument that determines whether the scan runs
+    # continuously or stops after one iteration.
+    #
+    def _do_scan(self, multi=True):
+        self.scan = iscan.IScan(self.src)
+        # Get params from controls and send to scan
+        self.scan.setDuration(self.dur.value())
+        self.scan.setSampleRate(self.srate.value())
+        self.scan.setNAverage(self.navg.value())
+        # Clean plotter and connect to scan
+        self.plotter.clear()
+        self.scan.sendPlotsTo(self.plotter)
+        plots = [self.trace1.value(), self.trace2.value(),
+                 self.trace3.value()]
+        print(f'plots = {plots}')
+        self.scan.plotInPanes(plots)
+        self.plotter.show()
+
+        self.strtBtn.setEnabled(False)
+        self.stopBtn.setEnabled(True)
+        self.saveBtn.setEnabled(False)
+
+        u_rate = self.urate.value()
+        step_dur = 0.93 / u_rate   # Tuned at 10/sec
+        print(f'Step duration {step_dur}')
+#        self.plotter.p3.setXRange(0.0, 1.0)
+        self.plotter.g1.setYRange(0.0, 0.2)
+        self.plotter.g2.setYRange(0.0, 0.2)
+        self.plotter.g3.setYRange(-5.5, 5.5)
+        self.stopScan = False
+        self.scan.startScan(u_rate)
+
+        get_time = time.time
+        time_1s = 1
+#        start_time = get_time()
+        step_dur = time_1s / u_rate
+        n_point = int(self.dur.value() * self.urate.value())
+        print(self.dur.value(), self.urate.value(), n_point)
+        raw_step_times = np.linspace(0, self.dur.value(), n_point)
+        # print(raw_step_times[:5])
+        # print(raw_step_times[-5:])
+        step_idx = 0
+        running = True
+        while running:
+            t0 = get_time()
+            step_times = raw_step_times + t0
+            for step_idx in range(n_point):
+                while get_time() < step_times[step_idx]:
+                    pass
+#                graph_end = self.scan.stepScan()
+                self.scan.stepScan(multi)
+                QApplication.processEvents()
+                if self.stopScan:
+                    running = False
+                    break
+        # execTime = (get_time() - start_time) / time_1s
+        # print(f'Left scan loop. {itn} steps took {execTime} s')
+        # print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
+        self.scan.dump()

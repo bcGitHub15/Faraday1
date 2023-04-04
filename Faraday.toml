@@ -5,7 +5,7 @@ MainHeight = 800
 DataPrefix = "FData"
 
 [inputs]
-InDev = ""
+InDev = "Dev2"
 V1Chan = "ai0"
 V2Chan = "ai1"
 VMChan = "ai2"

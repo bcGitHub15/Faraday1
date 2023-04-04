@@ -149,13 +149,18 @@ class IScan():
         self._ngap = 5  # Number of samples in gap between old and new data
         self._glim = self.n_sample - self._ngap    # REMOVE?
 
-        self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]   # NO IDEA!
+        self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]   # Starting averages
         # self.rdTime = 0
         # self.calcTime = 0
         # self.plotTime = 0
         # self.cnt = 0
 
-    def stepScan(self) -> bool:
+    #
+    #   Take and plot one more data point.
+    #   Argument determines whether we maintain the running gap that makes
+    #   it easier to watch in multi-scan mode.
+    #
+    def stepScan(self, do_gap=True) -> bool:
         graph_end = False
         #
         # Finally, we can actually run the scan.
@@ -173,9 +178,6 @@ class IScan():
         self.v1mv2[i] = self.data[0]-self.data[1]
         self.v1pv2[i] = self.data[0]+self.data[1]
         self.div[i] = self.v1mv2[i]/self.v1pv2[i]
-        # if self.scanIndex < self._glim:
-        #     for i in range(6):
-        #         self.traces[i][ig] = self.gvals[i]
 
 #            self.v1[ig] = self.gval1
 #            self.v2[ig] = self.gval2
@@ -227,6 +229,12 @@ class IScan():
             for i in range(6):
                 self.gvals[i] = np.average(self.traces[i][:-5])
                 self.traces[i][:self._ngap] = self.gvals[i]
+=======
+            if do_gap:
+                for i in range(6):
+                    self.gvals[i] = np.average(self.traces[i][:-5])
+                    self.traces[i][:self._ngap] = self.gvals[i]
+>>>>>>> Stashed changes
             print(f'Average V1={self.gvals[0]:.5f}, V2={self.gvals[1]:.5f}')
             '''
         # nread = 1

@@ -81,35 +81,37 @@ class NidaqmxSource:
             self.task.stop()
             return data[chan, :]
         else:
-            raise IndexError(f'Channel number {chan} is out of range 0-{self.n_chan}')
+            raise IndexError(f'Channel number {chan} is out of range'
+                             ' 0-{self.n_chan}')
 
     def readAvgFrom(self, chan: int, n2avg: int) -> float:
         data = np.zeros((self.n_chan, n2avg))
         if 0 <= chan and chan < self.n_chan:
             self.task.start()
-            nread = self.reader.read_many_sample(data, 
-                                    number_of_samples_per_channel=n2avg,
-                                    timeout=2)
+            self.reader.read_many_sample(data,
+                                         number_of_samples_per_channel=n2avg,
+                                         timeout=2)
             self.task.stop()
             return np.average(data[chan, :])
         else:
-            raise IndexError(f'Channel numbe {chan} is out of range 0-{self.n_chan} in readAvgFrom')
+            raise IndexError(f'Channel numbe {chan} is out of range'
+                             ' 0-{self.n_chan} in readAvgFrom')
 
     def readOne(self) -> float:
-        data = np.zeros((self.n_chan,1))
+        data = np.zeros((self.n_chan, 1))
         self.task.start()
-        nread = self.reader.read_many_sample(data, 
-                                number_of_samples_per_channel=1,
-                                timeout=2)
+        self.reader.read_many_sample(data,
+                                     number_of_samples_per_channel=1,
+                                     timeout=2)
         self.task.stop()
         return data
-    
+
     def readN(self, n2read: int) -> np.ndarray:
         data = np.zeros((self.n_chan, n2read))
         self.task.start()
-        nread = self.reader.read_many_sample(data, 
-                                number_of_samples_per_channel=n2read,
-                                timeout=2)
+        self.reader.read_many_sample(data,
+                                     number_of_samples_per_channel=n2read,
+                                     timeout=2)
         self.task.stop()
         return data
 
@@ -119,16 +121,17 @@ class NidaqmxSource:
                                              sample_mode=AcquisitionType.FINITE,
                                              samps_per_chan=n2avg)
         self.task.start()
-        nread = self.reader.read_many_sample(data, 
-                                number_of_samples_per_channel=n2avg,
-                                timeout=2)
+        nread = self.reader.read_many_sample(data,
+                                             number_of_samples_per_channel=n2avg,
+                                             timeout=2)
         if nread < n2avg:
             print(f'Asked for {n2avg} got {nread}')
         self.task.stop()
         return np.average(data, axis=1)
+
     #
     # Internal helpers
-    # First pulls sample rate into allowable range, sets internally, and returns.
+    # First pulls sample rate into range, sets internally, and returns.
     # Max rate is spread over all channels.
     # Min rate is, arbitrarily, 1 (as it has to be an integer)
     def _setGoodSampleRate(self, origRate: int):

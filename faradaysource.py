@@ -13,6 +13,7 @@ import numpy as np
 import time
 from voltagesource import VoltageSource
 
+
 class FaradaySource(VoltageSource):
     def __init__(self, chans, rate: int):
         # For moment chans should be a list or tuple of names
@@ -23,10 +24,10 @@ class FaradaySource(VoltageSource):
         self.n_chan = len(chans)
         self.sample_rate = int(rate)
         self.start = time.monotonic()
-    
+
     def setDataRate(self, rate: int) -> None:
         self.sample_rate = int(rate)
-    
+
     def readOneFrom(self, chan: int) -> float:
         if 0 <= chan and chan < self.n_chan:
             if chan == 0:
@@ -40,8 +41,9 @@ class FaradaySource(VoltageSource):
             else:
                 return 0.0
         else:
-            raise IndexError(f'Channel number {chan} is out of range 0-{self.n_chan} in readOneFrom')
-    
+            raise IndexError(f'Channel number {chan} is out of range'
+                             ' 0-{self.n_chan} in readOneFrom')
+
     def readNFrom(self, chan: int, n2read: int) -> np.ndarray:
         if 0 <= chan and chan < self.n_chan:
             if chan == 0:
@@ -57,7 +59,8 @@ class FaradaySource(VoltageSource):
             else:
                 return 0.0
         else:
-            raise IndexError(f'Channel number {chan} is out of range 0-{self.n_chan}')
+            raise IndexError(f'Channel number {chan} is out of range'
+                             ' 0-{self.n_chan}')
 
     def readAvgFrom(self, chan: int, n2avg: int) -> float:
         if 0 <= chan and chan < self.n_chan:
@@ -72,8 +75,9 @@ class FaradaySource(VoltageSource):
             else:
                 return 0.0
         else:
-            raise IndexError(f'Channel number {chan} is out of range 0-{self.n_chan} in readAvgFrom')
-    
+            raise IndexError(f'Channel number {chan} is out of range'
+                             ' 0-{self.n_chan} in readAvgFrom')
+
     # Sim but do all channels at once
     def readOne(self) -> np.ndarray:
         res = np.zeros(self.n_chan)
@@ -83,7 +87,7 @@ class FaradaySource(VoltageSource):
         t0 = now - self.start
         res[2] = np.sin(4 * np.pi * t0) * 4
         return res
-    
+
     def readN(self, n2read: int) -> np.ndarray:
         res = np.zeros((self.n_chan, n2read))
         res[0, :] = np.random.random(n2read) * 0.04
@@ -95,7 +99,7 @@ class FaradaySource(VoltageSource):
         res[2] = np.sin(4 * np.pi * t) * 4
         return res
 
-    def readAvg(self, chan: int, n2avg: int) -> float:
+    def readAvg(self, n2avg: int) -> float:
         res = np.zeros(self.n_chan)
         res[0] = np.random.random() * 0.04
         res[1] = np.random.random() * 0.04
@@ -103,3 +107,6 @@ class FaradaySource(VoltageSource):
         t0 = now - self.start
         res[2] = np.sin(4 * np.pi * t0) * 4
         return res
+
+    def close(self):
+        return True

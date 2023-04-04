@@ -15,17 +15,13 @@ Created on 2/4/2023
 #
 #   PyQt5 imports for the GUI
 #
-from PyQt5.QtCore import QDateTime, Qt, QTimer, pyqtSlot
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-        QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-        QProgressBar, QPushButton, QRadioButton, QScrollBar, QSizePolicy,
-        QSlider, QSpinBox, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QFormLayout, QSpacerItem)
-from PyQt5.QtGui import QStaticText
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLineEdit, QPushButton,
+                             QVBoxLayout, QWidget, QFormLayout, QSpacerItem,
+                             QGroupBox, QSizePolicy)
 #
-#   nidaq import for device probing
+#   nidaq import for device probing is only loaded if expected
 #
-import nidaqmx.system
 #
 #   Import our configuration
 #
@@ -36,6 +32,8 @@ class Configurator(QWidget):
     def __init__(self, cfg: FConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
+        print('In configurator')
+        print(self.cfg)
         #
         # System parameters
         #
@@ -52,14 +50,17 @@ class Configurator(QWidget):
         sysPanel.setLayout(sysLayout)
         #
         # Input parameters
-        # First build description of DAQ system
+        # First build description of DAQ system if we have
+        # a valid device name in the incoming cfg
         #
-        daqsys = nidaqmx.system.System.local()
         self.devList = []
-        self.chanList = ['ai0', 'ai1', 'ai2', 'ai3', 
+        self.chanList = ['ai0', 'ai1', 'ai2', 'ai3',
                          'ai4', 'ai5', 'ai6', 'ai7']
-        for dev in daqsys.devices:
-            self.devList.append(dev)
+        if cfg.inputs_get('InDev').startswith('Dev'):
+            import nidaqmx.system
+            daqsys = nidaqmx.system.System.local()
+            for dev in daqsys.devices:
+                self.devList.append(dev)
         # Then the panel
         inputPanel = QGroupBox('Input parameters')
         inputLayout = QFormLayout()
@@ -74,19 +75,22 @@ class Configurator(QWidget):
         # Voltage 1 input
         self.inV1 = QComboBox()
         self.inV1.addItems(self.chanList)
-        self.inV1.setCurrentIndex(self.chanList.index(cfg.inputs_get('V1Chan')))
+        indx = self.chanList.index(cfg.inputs_get('V1Chan'))
+        self.inV1.setCurrentIndex(indx)
         inputLayout.addRow('PD1 voltage channel', self.inV1)
         self.srate = QLineEdit(str(cfg.inputs_get('SampleRate')))
         # Voltage 2 input
         self.inV2 = QComboBox()
         self.inV2.addItems(self.chanList)
-        self.inV2.setCurrentIndex(self.chanList.index(cfg.inputs_get('V2Chan')))
+        indx = self.chanList.index(cfg.inputs_get('V2Chan'))
+        self.inV2.setCurrentIndex(indx)
         inputLayout.addRow('PD2 voltage channel', self.inV2)
         self.srate = QLineEdit(str(cfg.inputs_get('SampleRate')))
         # Modulation voltage input
         self.inVm = QComboBox()
         self.inVm.addItems(self.chanList)
-        self.inVm.setCurrentIndex(self.chanList.index(cfg.inputs_get('VMChan')))
+        indx = self.chanList.index(cfg.inputs_get('VMChan'))
+        self.inVm.setCurrentIndex(indx)
         inputLayout.addRow('Modulation voltage channel', self.inVm)
         # Params
         self.srate = QLineEdit(str(cfg.inputs_get('SampleRate')))
@@ -140,7 +144,7 @@ class Configurator(QWidget):
         configLayout.addWidget(graphPanel)
         configLayout.addLayout(btnLayout)
         vSpace = QSpacerItem(20, 40, QSizePolicy.Minimum,
-                                     QSizePolicy.Expanding)
+                             QSizePolicy.Expanding)
         configLayout.addItem(vSpace)
         self.setLayout(configLayout)
 
@@ -153,7 +157,7 @@ class Configurator(QWidget):
         # Inputs
         self.cfg.inputs_set('InDev', 'testText')
 #        print(self.cfg._config['inputs'])
-        fullDev =  self.inDev.currentText()
+        fullDev = self.inDev.currentText()
         devs = fullDev.split(' ')
 #        print('InDev ', devs[0])
         self.cfg.inputs_set('InDev', devs[0])
@@ -170,7 +174,6 @@ class Configurator(QWidget):
         self.cfg.graphs_set('MainWidth', int(self.gwText.text()))
         self.cfg.graphs_set('MainHeight', int(self.ghText.text()))
         self.cfg.graphs_set('UpdateRate', int(self.urate.text()))
-
 
     @pyqtSlot()
     def on_click(self, proceed: bool):

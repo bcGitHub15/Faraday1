@@ -41,28 +41,31 @@ class FConfig:
         return self._config[key]
 
     def inputs_get(self, key):
-        return self._inDict[key]
+        print(key)
+        print(self._inDict)
+        print(self._config['inputs'][key])
+        return self._config['inputs'][key]
 
     def outputs_get(self, key):
-        return self._outDict[key]
+        return self._config['outputs'][key]
 
     def graphs_get(self, key):
-        return self._graphDict[key]
+        return self._config['graphing'][key]
 
     def set(self, key, value):
         self._config[key] = value
 
     def inputs_set(self, key, value):
-#        print(key, self._inDict[key])
-        self._inDict[key] = value
+        #  print(key, self._inDict[key])
+        self._config['inputs'][key] = value
 #        print(key, self._inDict[key])
 #        print('inputs_set _indict=', self._inDict)
 
     def outputs_set(self, key, value):
-        self._outDict[key] = value
+        self._config['outputs'][key] = value
 
     def graphs_set(self, key, value):
-        self._graphDict[key] = value
+        self._config['graphing'][key] = value
 
     def __str__(self):
         return "Faraday Config"
@@ -89,9 +92,11 @@ class FConfig:
             raise RuntimeError('Config filename must end in ".toml".')
         with open(filename, 'r') as f:
             self._config = toml.load(f)
-            print(self._config)
 #            self._mapDict = self._config['mapper']
 #            self._probeDict = self._config['probe']
+        print('In fconfig loadFrom')
+        print(self._config)
+        print(self.inputs_get('InDev'))
         return True
 
 

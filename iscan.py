@@ -17,7 +17,6 @@ import numpy as np
 #
 #   system imports
 #
-#import numpy as np
 import time
 #
 #   our imports
@@ -33,6 +32,7 @@ class IScan():
                  'PD1 - PD2 (V)',
                  'PD1 + PD2 (V)',
                  '(PD1-PD2)/(PD1+PD2)']
+
     def __init__(self, src: VoltageSource):
         self.src = src
         self.plotter = None
@@ -57,10 +57,11 @@ class IScan():
 
     def setUpdateRate(self, rate: int) -> None:
         self.update_rate = time
-    
+
     def setNAverage(self, nAvg: int) -> None:
         self.nAverage = nAvg
-    
+        print(f'In setNAverage nAvg = {self.nAverage}')
+
     def plotInPane1(self, idx: int):
         if idx > 5:
             raise RuntimeError(f'Plot index {idx} out of range 0-5.')
@@ -86,6 +87,7 @@ class IScan():
         self.plotInPane1(indices[0])
         self.plotInPane2(indices[1])
         self.plotInPane3(indices[2])
+
     #
     #   A scan broken up into steps for live use.
     #
@@ -141,17 +143,17 @@ class IScan():
         self.v1mv2 = np.zeros(self.n_sample)
         self.v1pv2 = np.zeros(self.n_sample)
         self.div = np.zeros(self.n_sample)
-        self.traces = (self.v1, self.v2, self.vm, 
+        self.traces = (self.v1, self.v2, self.vm,
                        self.v1mv2, self.v1pv2, self.div)
         self.startTime = time.monotonic()
-        self._ngap = 5
-        self._glim = self.n_sample - self._ngap
+        self._ngap = 5  # Number of samples in gap between old and new data
+        self._glim = self.n_sample - self._ngap    # REMOVE?
 
-        self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
-        self.rdTime = 0
-        self.calcTime = 0
-        self.plotTime = 0
-        self.cnt = 0
+        self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]   # NO IDEA!
+        # self.rdTime = 0
+        # self.calcTime = 0
+        # self.plotTime = 0
+        # self.cnt = 0
 
     def stepScan(self) -> bool:
         graph_end = False
@@ -161,9 +163,9 @@ class IScan():
         #        self.data = self.src.readOne()
         t1 = time.monotonic()
         self.data = self.src.readAvg(self.nAverage)
-        t2 = time.monotonic()
+        # t2 = time.monotonic()
         i = self.scanIndex
-        ig = self.scanIndex + self._ngap
+        # ig = self.scanIndex + self._ngap
         self.times[i] = t1 - self.startTime
         self.v1[i] = self.data[0]
         self.v2[i] = self.data[1]
@@ -171,18 +173,22 @@ class IScan():
         self.v1mv2[i] = self.data[0]-self.data[1]
         self.v1pv2[i] = self.data[0]+self.data[1]
         self.div[i] = self.v1mv2[i]/self.v1pv2[i]
-        if self.scanIndex < self._glim:
-            for i in range(6):
-                self.traces[i][ig] = self.gvals[i]
+        # if self.scanIndex < self._glim:
+        #     for i in range(6):
+        #         self.traces[i][ig] = self.gvals[i]
 
 #            self.v1[ig] = self.gval1
 #            self.v2[ig] = self.gval2
 #            self.vm[ig] = self.gval3
         self.scanIndex += 1
         if self.scanIndex >= self.n_sample:  # End of graph, reset
-#            print(self.times)
-#            print('')
+            # print(self.times)
+            # print('')
             graph_end = True
+            #
+            #   Compute ranges of visible traces and use to set
+            #   graph limits
+            #
             mx1 = np.max(self.traces[self.pane1])
             mn1 = np.min(self.traces[self.pane1])
             r1 = 1.25*(mx1-mn1)
@@ -198,43 +204,58 @@ class IScan():
             r3 = 1.25*(mx3-mn3)
             a3 = 0.5*(mx3+mn3)
             self.plotter.g3.setYRange(a3-r3, a3+r3)
+            # Save averages
+            for i in range(6):
+                self.gvals[i] = np.average(self.traces[i][:-5])
 #            self.gvals[1] = np.average(self.v2[:-5])
             self.scanIndex = 0
             self.startTime = time.monotonic()
+        #
+        #   Update plots
+        #
+        t1c = self.traces[self.pane1].copy()
+        t1c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane1]
+        t2c = self.traces[self.pane2].copy()
+        t2c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane2]
+        t3c = self.traces[self.pane3].copy()
+        t3c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane3]
+        if self.plotter:
+            self.line1.setData(self.times, t1c)
+            self.line2.setData(self.times, t2c)
+            self.line3.setData(self.times, t3c)
+            '''
             for i in range(6):
                 self.gvals[i] = np.average(self.traces[i][:-5])
                 self.traces[i][:self._ngap] = self.gvals[i]
             print(f'Average V1={self.gvals[0]:.5f}, V2={self.gvals[1]:.5f}')
-        nread = 1
+            '''
+        # nread = 1
         '''
         self.data = self.src.readN(self.n_sample)
         nread = int(len(self.data)/3)
 #        print(nread, self.data[2,:5])
-        '''
-        t3 = time.monotonic()
+        # t3 = time.monotonic()
         if nread > 0:
             if self.plotter:
-                '''
-                self.line1.setData(self.times, self.data[0, :])
-                self.line2.setData(self.times, self.data[1, :])
-                self.line3.setData(self.times, self.data[2, :])
-                '''
                 self.line1.setData(self.times, self.traces[self.pane1])
                 self.line2.setData(self.times, self.traces[self.pane2])
                 self.line3.setData(self.times, self.traces[self.pane3])
         else:
-            print('Data read failed!')
             raise RuntimeError('Data read failed!')
-        t4 = time.monotonic()
-        self.rdTime += t2 - t1
-        self.calcTime += t3 - t2
-        self.plotTime += t4 - t3
-        self.cnt += 1
+        '''
+        # t4 = time.monotonic()
+        # self.rdTime += t2 - t1
+        # self.calcTime += t3 - t2
+        # self.plotTime += t4 - t3
+        # self.cnt += 1
         return graph_end
 
     def dump(self):
-#        self.src.close()
-        print(f'Avg read {self.rdTime/self.cnt}, calc {self.calcTime/self.cnt}, plot {self.plotTime/self.cnt}')
+        pass
+        # self.src.close()
+        # print(f'Avg read {self.rdTime/self.cnt},'
+        #       ' calc {self.calcTime/self.cnt},'
+        #       ' plot {self.plotTime/self.cnt}')
 
     #
     #   Plot as a set of four graphs
@@ -248,7 +269,7 @@ class IScan():
     #
     def _plotOn(self, axis, array, errors, name='B Field'):
         pass
-    
+
     #
     #   Send data in text form to a .csv file
     #

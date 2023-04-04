@@ -82,6 +82,8 @@ if __name__ == '__main__':
     gConfig = FConfig()
     gConfig.loadFrom('Faraday.toml')
     theApp = QApplication(sys.argv)
+    print('In Faraday')
+    print(gConfig._config)
     mainWin = FWin(gConfig)
     try:
         sys.exit(theApp.exec_())

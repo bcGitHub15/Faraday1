@@ -252,6 +252,22 @@ class RPlotter(QWidget):
         print(self.fv1pv2[:20])
         self.fdiv = np.absolute(np.fft.rfft(self.scan.div))
         print(self.fdiv[:20])
+        ftraces = ( self.fv1, self.fv2, self.fvm, 
+                    self.fv1mv2, self.fv1pv2, self.fdiv )
+        # fmax = 1 + self.dur.value() * self.urate.value() * 0.5
+        fmax = self.urate.value() * 0.5
+        print(len(self.scan.v1), len(self.fv1), fmax)
+        fbad = np.linspace(0, fmax, len(self.fv1))
+        print(fbad[-1])
+        self.plotter.g1.clear()
+        self.plotter.g1.enableAutoRange()
+        self.plotter.g1.plot(fbad, ftraces[self.plots[0]])
+        self.plotter.g2.clear()
+        self.plotter.g2.enableAutoRange()
+        self.plotter.g2.plot(fbad, ftraces[self.plots[1]])
+        self.plotter.g3.clear()
+        self.plotter.g3.enableAutoRange()
+        self.plotter.g3.plot(fbad, ftraces[self.plots[2]])
     #
     # _do_scan actually takes the data and maintains the plots.
     # It takes one argument that determines whether the scan runs
@@ -266,10 +282,10 @@ class RPlotter(QWidget):
         # Clean plotter and connect to scan
         self.plotter.clear()
         self.scan.sendPlotsTo(self.plotter)
-        plots = [self.trace1.value(), self.trace2.value(),
+        self.plots = [self.trace1.value(), self.trace2.value(),
                  self.trace3.value()]
-        print(f'plots = {plots}')
-        self.scan.plotInPanes(plots)
+        print(f'plots = {self.plots}')
+        self.scan.plotInPanes(self.plots)
         self.plotter.show()
 
         self.strtBtn.setEnabled(False)
@@ -309,6 +325,8 @@ class RPlotter(QWidget):
                 if self.stopScan:
                     running = False
                     break
+            if not multi:
+                break
         # execTime = (get_time() - start_time) / time_1s
         # print(f'Left scan loop. {itn} steps took {execTime} s')
         # print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')

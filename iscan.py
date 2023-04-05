@@ -147,7 +147,7 @@ class IScan():
                        self.v1mv2, self.v1pv2, self.div)
         self.startTime = time.monotonic()
         self._ngap = 5  # Number of samples in gap between old and new data
-        self._glim = self.n_sample - self._ngap    # REMOVE?
+        # self._glim = self.n_sample - self._ngap    # REMOVE?
 
         self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]   # Starting averages
         # self.rdTime = 0
@@ -216,41 +216,16 @@ class IScan():
         #   Update plots
         #
         t1c = self.traces[self.pane1].copy()
-        t1c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane1]
         t2c = self.traces[self.pane2].copy()
-        t2c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane2]
         t3c = self.traces[self.pane3].copy()
-        t3c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane3]
+        if self.scanIndex > 0:
+            t1c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane1]
+            t2c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane2]
+            t3c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane3]
         if self.plotter:
             self.line1.setData(self.times, t1c)
             self.line2.setData(self.times, t2c)
             self.line3.setData(self.times, t3c)
-            '''
-            for i in range(6):
-                self.gvals[i] = np.average(self.traces[i][:-5])
-                self.traces[i][:self._ngap] = self.gvals[i]
-=======
-            if do_gap:
-                for i in range(6):
-                    self.gvals[i] = np.average(self.traces[i][:-5])
-                    self.traces[i][:self._ngap] = self.gvals[i]
->>>>>>> Stashed changes
-            print(f'Average V1={self.gvals[0]:.5f}, V2={self.gvals[1]:.5f}')
-            '''
-        # nread = 1
-        '''
-        self.data = self.src.readN(self.n_sample)
-        nread = int(len(self.data)/3)
-#        print(nread, self.data[2,:5])
-        # t3 = time.monotonic()
-        if nread > 0:
-            if self.plotter:
-                self.line1.setData(self.times, self.traces[self.pane1])
-                self.line2.setData(self.times, self.traces[self.pane2])
-                self.line3.setData(self.times, self.traces[self.pane3])
-        else:
-            raise RuntimeError('Data read failed!')
-        '''
         # t4 = time.monotonic()
         # self.rdTime += t2 - t1
         # self.calcTime += t3 - t2

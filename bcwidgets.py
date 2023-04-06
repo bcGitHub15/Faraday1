@@ -100,3 +100,31 @@ class NamedCombo(QWidget):
     def text(self) -> int:
         return self.box.currentText()
 
+# ******************************************************************
+#
+#   Widget that combines a comboBox, a LineEdit, and a display
+#   Returns string values.
+#
+# ******************************************************************
+class NamedComboDisp(QWidget):
+    def __init__(self, name: str, namelist: list):
+        print(f'Init NamedCombo({name}, {namelist})')
+        self.label = QLabel(name)
+        self.box = QComboBox()
+        self.box.addItems(namelist)
+        self.disp = QLineEdit('0+/-0')
+        self.disp.setReadOnly((True))
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.box)
+        self.layout.addWidget(self.disp)
+
+    def value(self) -> int:
+        return self.box.currentIndex()
+
+    def text(self) -> int:
+        return self.box.currentText()
+
+    def show(self, val: float, err: float):
+        dstr = f'{val:.5f}+/-{err:.5f}'
+        self.disp.setText(dstr)

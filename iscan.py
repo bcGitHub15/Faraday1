@@ -150,6 +150,7 @@ class IScan():
         # self._glim = self.n_sample - self._ngap    # REMOVE?
 
         self.gvals = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]   # Starting averages
+        self.gerrs = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]   # and std. devs.
         # self.rdTime = 0
         # self.calcTime = 0
         # self.plotTime = 0
@@ -183,6 +184,9 @@ class IScan():
 #            self.v2[ig] = self.gval2
 #            self.vm[ig] = self.gval3
         self.scanIndex += 1
+        #
+        #   Check for end of scan and process if found
+        #
         if self.scanIndex >= self.n_sample:  # End of graph, reset
             # print(self.times)
             # print('')
@@ -206,9 +210,10 @@ class IScan():
             r3 = 1.25*(mx3-mn3)
             a3 = 0.5*(mx3+mn3)
             self.plotter.g3.setYRange(a3-r3, a3+r3)
-            # Save averages
+            # Save averages and std. devs.
             for i in range(6):
-                self.gvals[i] = np.average(self.traces[i][:-5])
+                self.gvals[i] = np.average(self.traces[i])
+                self.gerrs[i] = np.std(self.traces[i])
 #            self.gvals[1] = np.average(self.v2[:-5])
             self.scanIndex = 0
             self.startTime = time.monotonic()
@@ -232,6 +237,13 @@ class IScan():
         # self.plotTime += t4 - t3
         # self.cnt += 1
         return graph_end
+
+    def get_err(self, idx: int) -> float:
+        return self.gerrs[idx]
+
+    def get_avg(self, idx: int) -> float:
+        print(self.gvals[idx])
+        return self.gvals[idx]
 
     def dump(self):
         pass

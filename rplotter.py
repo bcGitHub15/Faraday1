@@ -12,7 +12,10 @@ interface.
 Created on 1/31/2023
 @author: bcollett
 
-Modifier 3/30/23 Add support for a Fourier data collection section.
+Modified 3/30/23 Add support for a Fourier data collection section.
+4/6/23 Make Stop always complete a scan. Made rolling average mark
+ONLY in graph, not in data.
+Replace Fourier section with a Fourier button.
 """
 import numpy as np
 import time
@@ -78,13 +81,13 @@ class RPlotter(QWidget):
         #
         traceNames = ('V1', 'V2', 'Vm', 'V1 - V2',
                       'v1 + v2', 'V1 - V2/v1 + v2')
-        self.trace1 = bcwidgets.NamedCombo('Plot 1 shows', traceNames)
+        self.trace1 = bcwidgets.NamedComboDisp('Plot 1 shows', traceNames)
         self.trace1.box.setCurrentIndex(0)
         manLayout0.addLayout(self.trace1.layout)
-        self.trace2 = bcwidgets.NamedCombo('Plot 2 shows', traceNames)
+        self.trace2 = bcwidgets.NamedComboDisp('Plot 2 shows', traceNames)
         self.trace2.box.setCurrentIndex(1)
         manLayout0.addLayout(self.trace2.layout)
-        self.trace3 = bcwidgets.NamedCombo('Plot 3 shows', traceNames)
+        self.trace3 = bcwidgets.NamedComboDisp('Plot 3 shows', traceNames)
         self.trace3.box.setCurrentIndex(2)
         manLayout0.addLayout(self.trace3.layout)
         #
@@ -109,9 +112,10 @@ class RPlotter(QWidget):
         #
         #   Start a Fourier section
         #
-        fsec = QLabel('Fourier Data Collect')
+        fsec = QLabel('Fourier Analyze Data')
         fsec.setFrameStyle(QFrame.Panel | QFrame.Raised)
         manLayout0.addWidget(fsec)
+        '''
         #
         #   Top lines have settings and control buttons
         #
@@ -124,12 +128,13 @@ class RPlotter(QWidget):
         self.fdur = bcwidgets.NamedFloatEdit('Data Duration (s)',
                                              oldfDur)
         manLayout0.addLayout(self.fdur.layout)
+        '''
         #
         # Last line is for collect and save buttons
         #
         fline = QHBoxLayout()
         # START
-        self.fstrtBtn = QPushButton("COLLECT")
+        self.fstrtBtn = QPushButton("Analyze & Plot Fourier")
         self.fstrtBtn.clicked.connect(self.on_click_fstart)
         fline.addWidget(self.fstrtBtn)
         # SAVE
@@ -174,6 +179,7 @@ class RPlotter(QWidget):
         self.strtBtn.setEnabled(True)
         self.stopBtn.setEnabled(False)
         self.saveBtn.setEnabled(True)
+        self.fstrtBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_click_close(self):
@@ -184,20 +190,23 @@ class RPlotter(QWidget):
     def on_click_save(self):
         if self.scan is not None:
             fname = self._unique_file_name()
+            fname = fname + ".csv"
             print(f'Save data to {fname}')
             self.scan.saveTo(fname)
 
     @pyqtSlot()
     def on_click_fstart(self):
         print('Collect Fourier pressed')
-        self._do_scan(False)
+        self._do_fourier()
+        # self._do_scan(False)
         self.fsaveBtn.setEnabled(True)
-        self.saveBtn.setEnabled(True)
+        # self.saveBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_click_fsave(self):
         print('Save Fourier pressed')
-        self._do_fourier()
+        fname = self._unique_file_name() + "Four.csv"
+        print(f'Save Fourier to {fname}')
 
 #
 #   Internal helpers
@@ -228,7 +237,7 @@ class RPlotter(QWidget):
     def _unique_file_name(self) -> str:
         dstr = datetime.today().strftime('%m%d%y-%M%H')
         root = self.cfg.get('DataPrefix')
-        return f'{root}{dstr}.csv'
+        return f'{root}{dstr}'
 
     #
     # _do_fourier does just what you think.
@@ -241,17 +250,17 @@ class RPlotter(QWidget):
         # Work through the 6 data arrays
         #
         self.fv1 = np.absolute(np.fft.rfft(self.scan.v1))
-        print(self.fv1[:20])
+        # print(self.fv1[:20])
         self.fv2 = np.absolute(np.fft.rfft(self.scan.v2))
-        print(self.fv2[:20])
+        # print(self.fv2[:20])
         self.fvm = np.absolute(np.fft.rfft(self.scan.vm))
-        print(self.fvm[:20])
+        # print(self.fvm[:20])
         self.fv1mv2 = np.absolute(np.fft.rfft(self.scan.v1mv2))
-        print(self.fv1mv2[:20])
+        # print(self.fv1mv2[:20])
         self.fv1pv2 = np.absolute(np.fft.rfft(self.scan.v1pv2))
-        print(self.fv1pv2[:20])
+        # print(self.fv1pv2[:20])
         self.fdiv = np.absolute(np.fft.rfft(self.scan.div))
-        print(self.fdiv[:20])
+        # print(self.fdiv[:20])
         ftraces = ( self.fv1, self.fv2, self.fvm, 
                     self.fv1mv2, self.fv1pv2, self.fdiv )
         # fmax = 1 + self.dur.value() * self.urate.value() * 0.5
@@ -316,16 +325,26 @@ class RPlotter(QWidget):
         while running:
             t0 = get_time()
             step_times = raw_step_times + t0
+            # Do One Scan
             for step_idx in range(n_point):
                 while get_time() < step_times[step_idx]:
                     pass
 #                graph_end = self.scan.stepScan()
                 self.scan.stepScan(multi)
                 QApplication.processEvents()
+                '''
                 if self.stopScan:
                     running = False
                     break
-            if not multi:
+                '''
+            # End of scan. Update and see if do more scans.
+            idx = self.trace1.value()
+            self.trace1.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+            idx = self.trace2.value()
+            self.trace2.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+            idx = self.trace3.value()
+            self.trace3.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+            if not multi or self.stopScan:
                 break
         # execTime = (get_time() - start_time) / time_1s
         # print(f'Left scan loop. {itn} steps took {execTime} s')

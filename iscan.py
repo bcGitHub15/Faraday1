@@ -37,7 +37,7 @@ class IScan():
         self.src = src
         self.plotter = None
         self.duration = 0.1      # Will be reset when built
-        self.sampleRate = 100_000
+        self.sample_rate = 100_000
         self.update = 1
         self.nAverage = 100
         # These control what gets plotted in each pane
@@ -52,8 +52,9 @@ class IScan():
     def setDuration(self, time: float) -> None:
         self.duration = time
 
-    def setSampleRate(self, time: int) -> None:
-        self.sample_rate = time
+    def setSampleRate(self, rate: int) -> None:
+        self.sample_rate = rate
+        self.src.setDataRate(rate)
 
     def setUpdateRate(self, rate: int) -> None:
         self.update_rate = time
@@ -161,7 +162,8 @@ class IScan():
     #   Argument determines whether we maintain the running gap that makes
     #   it easier to watch in multi-scan mode.
     #
-    def stepScan(self, do_gap=True) -> bool:
+    # def stepScan(self, do_gap=True) -> bool:
+    def stepScan(self, do_plot=True) -> bool:
         graph_end = False
         #
         # Finally, we can actually run the scan.
@@ -227,7 +229,7 @@ class IScan():
             t1c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane1]
             t2c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane2]
             t3c[self.scanIndex:self.scanIndex+self._ngap] = self.gvals[self.pane3]
-        if self.plotter:
+        if self.plotter and do_plot:
             self.line1.setData(self.times, t1c)
             self.line2.setData(self.times, t2c)
             self.line3.setData(self.times, t3c)
@@ -242,7 +244,7 @@ class IScan():
         return self.gerrs[idx]
 
     def get_avg(self, idx: int) -> float:
-        print(self.gvals[idx])
+        # print(self.gvals[idx])
         return self.gvals[idx]
 
     def dump(self):

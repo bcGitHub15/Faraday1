@@ -67,7 +67,7 @@ class RPlotter(QWidget):
         manLayout0.addLayout(self.dur.layout)
         #
         oldURate = cfg.graphs_get('UpdateRate')
-        self.urate = bcwidgets.NamedIntEdit('Graph update Rate (sps)',
+        self.urate = bcwidgets.NamedIntEdit('Data update Rate (sps)',
                                             oldURate)
         manLayout0.addLayout(self.urate.layout)
         #
@@ -134,7 +134,7 @@ class RPlotter(QWidget):
         #
         fline = QHBoxLayout()
         # START
-        self.fstrtBtn = QPushButton("Analyze & Plot Fourier")
+        self.fstrtBtn = QPushButton("Analyze/Plot Fourier")
         self.fstrtBtn.clicked.connect(self.on_click_fstart)
         fline.addWidget(self.fstrtBtn)
         # SAVE
@@ -205,8 +205,14 @@ class RPlotter(QWidget):
     @pyqtSlot()
     def on_click_fsave(self):
         print('Save Fourier pressed')
-        fname = self._unique_file_name() + "Four.csv"
+        base_name = self._unique_file_name()
+        fname = base_name + "Four.csv"
         print(f'Save Fourier to {fname}')
+        darray = np.stack((self.freq, self.fv1, self.fv2, self.fvm,
+                           self.fv1mv2, self.fv1pv2, self.fdiv), axis=1)
+        hdr = 'freq,V1,V2,Vm,V1-V2,V1+V2,Vdiv'
+        np.savetxt(fname, darray, header=hdr, delimiter=', ')
+        self.scan.saveTo(base_name + '.csv')
 
 #
 #   Internal helpers
@@ -240,7 +246,7 @@ class RPlotter(QWidget):
         return f'{root}{dstr}'
 
     #
-    # _do_fourier does just what you think.
+    # _do_fourier transforms all data and updates displayed traces.
     #
     def _do_fourier(self):
         if self.scan is None:
@@ -266,17 +272,16 @@ class RPlotter(QWidget):
         # fmax = 1 + self.dur.value() * self.urate.value() * 0.5
         fmax = self.urate.value() * 0.5
         print(len(self.scan.v1), len(self.fv1), fmax)
-        fbad = np.linspace(0, fmax, len(self.fv1))
-        print(fbad[-1])
+        self.freq = np.linspace(0, fmax, len(self.fv1))
         self.plotter.g1.clear()
         self.plotter.g1.enableAutoRange()
-        self.plotter.g1.plot(fbad, ftraces[self.plots[0]])
+        self.plotter.g1.plot(self.freq, ftraces[self.plots[0]])
         self.plotter.g2.clear()
         self.plotter.g2.enableAutoRange()
-        self.plotter.g2.plot(fbad, ftraces[self.plots[1]])
+        self.plotter.g2.plot(self.freq, ftraces[self.plots[1]])
         self.plotter.g3.clear()
         self.plotter.g3.enableAutoRange()
-        self.plotter.g3.plot(fbad, ftraces[self.plots[2]])
+        self.plotter.g3.plot(self.freq, ftraces[self.plots[2]])
     #
     # _do_scan actually takes the data and maintains the plots.
     # It takes one argument that determines whether the scan runs
@@ -286,7 +291,9 @@ class RPlotter(QWidget):
         self.scan = iscan.IScan(self.src)
         # Get params from controls and send to scan
         self.scan.setDuration(self.dur.value())
+        print(f'Orig sample rate {self.scan.sample_rate}')
         self.scan.setSampleRate(self.srate.value())
+        print(f'Sample rate set to {self.scan.sample_rate}')
         self.scan.setNAverage(self.navg.value())
         # Clean plotter and connect to scan
         self.plotter.clear()
@@ -318,19 +325,31 @@ class RPlotter(QWidget):
         n_point = int(self.dur.value() * self.urate.value())
         print(self.dur.value(), self.urate.value(), n_point)
         raw_step_times = np.linspace(0, self.dur.value(), n_point)
+        n_plot = self.cfg.graphs_get('UpdateRate')
+        t_plot = 1.0 / n_plot
+        print(f't_plot = {t_plot}')
         # print(raw_step_times[:5])
         # print(raw_step_times[-5:])
         step_idx = 0
         running = True
+        #
+        # Actual Scan starts here
+        #
         while running:
             t0 = get_time()
             step_times = raw_step_times + t0
+            pt = t0
             # Do One Scan
             for step_idx in range(n_point):
-                while get_time() < step_times[step_idx]:
-                    pass
-#                graph_end = self.scan.stepScan()
-                self.scan.stepScan(multi)
+                while True:
+                    ct = get_time()
+                    if ct >= step_times[step_idx]:
+                        break
+                if ct > pt:
+                    pt = pt + t_plot
+                    self.scan.stepScan(True)
+                else:
+                    self.scan.stepScan(False)
                 QApplication.processEvents()
                 '''
                 if self.stopScan:

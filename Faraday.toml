@@ -9,13 +9,16 @@ InDev = "Dev2"
 V1Chan = "ai0"
 V2Chan = "ai1"
 VMChan = "ai2"
-SampleRate = 10000
-LiveDuration = 10.0
+SampleRate = 3000
+LiveDuration = 3.0
+UpdateRate = 10.0
 
 [outputs]
-OutDev = ""
+OutDev = "Dev2 USB-6251 (Mass Termination)"
 
 [graphing]
 GraphWidth = 900
 GraphHeight = 800
 UpdateRate = 10
+MainWidth = 900
+MainHeight = 800

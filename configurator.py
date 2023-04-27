@@ -97,6 +97,8 @@ class Configurator(QWidget):
         inputLayout.addRow('Raw sample rate (sps)', self.srate)
         self.dur = QLineEdit(str(cfg.inputs_get('LiveDuration')))
         inputLayout.addRow('Live duration (s)', self.dur)
+        self.drate = QLineEdit(str(cfg.inputs_get('UpdateRate')))
+        inputLayout.addRow('Data update rate (sps)', self.drate)
         inputPanel.setLayout(inputLayout)
         #
         # Output parameters
@@ -122,7 +124,7 @@ class Configurator(QWidget):
         self.ghText = QLineEdit(str(cfg.graphs_get('GraphHeight')))
         graphLayout.addRow('Graph window height', self.ghText)
         self.urate = QLineEdit(str(cfg.graphs_get('UpdateRate')))
-        graphLayout.addRow('Graph update rate (sps)', self.urate)
+        graphLayout.addRow('Graph update rate (fps)', self.urate)
         graphPanel.setLayout(graphLayout)
         #
         #   Buttons
@@ -168,6 +170,7 @@ class Configurator(QWidget):
         self.cfg.inputs_set('VMChan', self.inVm.currentText())
         self.cfg.inputs_set('SampleRate', int(self.srate.text()))
         self.cfg.inputs_set('LiveDuration', float(self.dur.text()))
+        self.cfg.inputs_set('UpdateRate', float(self.drate.text()))
         # Outputs
         self.cfg.outputs_set('OutDev', self.outDev.currentText())
         # Graphing
@@ -180,4 +183,4 @@ class Configurator(QWidget):
         print(f"Close config, accept = {proceed}.")
         if proceed:
             self.update()
-            self.cfg.saveOn('FTest.toml')
+            print("Saving resulted in {}",self.cfg.saveOn('Faraday.toml'))

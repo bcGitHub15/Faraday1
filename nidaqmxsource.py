@@ -117,6 +117,7 @@ class NidaqmxSource:
 
     def readAvg(self, n2avg: int) -> float:
         data = np.zeros((self.n_chan, n2avg))
+        # print(f'Read avg rate {self.sample_rate}')
         self.task.timing.cfg_samp_clk_timing(self.sample_rate,
                                              sample_mode=AcquisitionType.FINITE,
                                              samps_per_chan=n2avg)
@@ -126,6 +127,7 @@ class NidaqmxSource:
                                              timeout=2)
         if nread < n2avg:
             print(f'Asked for {n2avg} got {nread}')
+        # print(f'Asked for {n2avg} got {nread} at {self.sample_rate}')
         self.task.stop()
         return np.average(data, axis=1)
 

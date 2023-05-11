@@ -9,7 +9,7 @@ InDev = "Dev2"
 V1Chan = "ai0"
 V2Chan = "ai1"
 VMChan = "ai2"
-SampleRate = 3000
+SampleRate = 3600
 LiveDuration = 3.0
 UpdateRate = 10.0
 

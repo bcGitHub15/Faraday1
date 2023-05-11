@@ -61,6 +61,12 @@ class ThreePlotWidget(QWidget):
 #        '''
 #        print(f'Created {self}')
 
+    def setXRangeLabel(self, xmin, xmax, label):
+        # self.g1.setXRange(xmin, xmax)
+        self.g2.setXRange(xmin, xmax)
+        self.g3.setXRange(xmin, xmax)
+        self.g3.setLabel('bottom', label)
+
     def clear(self):
         print('Clear sub plts')
         '''

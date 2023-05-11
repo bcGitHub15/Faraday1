@@ -16,6 +16,14 @@ Modified 3/30/23 Add support for a Fourier data collection section.
 4/6/23 Make Stop always complete a scan. Made rolling average mark
 ONLY in graph, not in data.
 Replace Fourier section with a Fourier button.
+
+Modified 5/10/23 Move basic Fourier buttons up into main section 
+and make new single-shot section that does NOT do live scans. Instead
+it takes all the data before displaying any. The benefit is that it
+can run at MUCH higher data rates.
+Re-arrange the controls so that the section that selects which plots
+to display comes first, then an interactive section, then a single-shot
+section.
 """
 import numpy as np
 import time
@@ -25,8 +33,8 @@ from datetime import datetime
 #   PyQt5 imports for the GUI
 #
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QLabel,
-                             QPushButton, QFrame, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QGroupBox,
+                             QPushButton, QVBoxLayout, QWidget)
 # from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
 # from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
 #
@@ -39,11 +47,13 @@ from faradaysource import FaradaySource
 import bcwidgets
 from fconfig import FConfig
 # from windowcontroller import WindowController
+import ttimer
 
 
 # class RPlotter(QWidget, WindowController):
 class RPlotter(QWidget):
     def __init__(self, cfg: FConfig, *args, **kwargs):
+        # Build our basic structure
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.plotter = threeplotwidget.ThreePlotWidget()
@@ -52,46 +62,60 @@ class RPlotter(QWidget):
 #        WindowController(self).__init__(self.plotter)
         self.showPlot = False
         self.scan = None
-
         self.src = self._find_source(cfg)
+        print(f'Create scan with source {self.src}')
+        self.scan = iscan.IScan(self.src)
+        #
+        #   Lay controls out in the window
+        #
         manLayout0 = QVBoxLayout()
+        #
+        # First select which traces to plot
+        #
+        box1 = QGroupBox('Select traces to plot')
+        l1 = QVBoxLayout()
+        box1.setLayout(l1)
+        traceNames = ('V1', 'V2', 'Vm', 'V1 - V2',
+                      'v1 + v2', 'V1 - V2/v1 + v2')
+        self.trace1 = bcwidgets.NamedComboDisp('Plot 1 shows', traceNames)
+        self.trace1.box.setCurrentIndex(0)
+        l1.addLayout(self.trace1.layout)
+        self.trace2 = bcwidgets.NamedComboDisp('Plot 2 shows', traceNames)
+        self.trace2.box.setCurrentIndex(1)
+        l1.addLayout(self.trace2.layout)
+        self.trace3 = bcwidgets.NamedComboDisp('Plot 3 shows', traceNames)
+        self.trace3.box.setCurrentIndex(2)
+        l1.addLayout(self.trace3.layout)
+        manLayout0.addWidget(box1)
+        #
+        #   Then start a section for the interactive grapher.
+        #
+        box2 = QGroupBox('Interactive plotting')
+        l2 = QVBoxLayout()
+        box2.setLayout(l2)
         #
         #   Top lines have settings and control buttons
         #
         oldSRate = cfg.inputs_get('SampleRate')
         self.srate = bcwidgets.NamedIntEdit('Sample Rate (sps)', oldSRate)
-        manLayout0.addLayout(self.srate.layout)
+        l2.addLayout(self.srate.layout)
         #
         oldDur = cfg.inputs_get('LiveDuration')
         self.dur = bcwidgets.NamedFloatEdit('Duration (s)', oldDur)
-        manLayout0.addLayout(self.dur.layout)
+        l2.addLayout(self.dur.layout)
         #
         oldURate = cfg.graphs_get('UpdateRate')
         self.urate = bcwidgets.NamedIntEdit('Data update Rate (sps)',
                                             oldURate)
-        manLayout0.addLayout(self.urate.layout)
+        l2.addLayout(self.urate.layout)
         #
-        oldNAvg = 100
+        oldNAvg = 30
         self.navg = bcwidgets.NamedIntEdit('Number of samples'
                                            ' to average per point',
                                            oldNAvg)
-        manLayout0.addLayout(self.navg.layout)
+        l2.addLayout(self.navg.layout)
         #
-        # Select which traces to plot
-        #
-        traceNames = ('V1', 'V2', 'Vm', 'V1 - V2',
-                      'v1 + v2', 'V1 - V2/v1 + v2')
-        self.trace1 = bcwidgets.NamedComboDisp('Plot 1 shows', traceNames)
-        self.trace1.box.setCurrentIndex(0)
-        manLayout0.addLayout(self.trace1.layout)
-        self.trace2 = bcwidgets.NamedComboDisp('Plot 2 shows', traceNames)
-        self.trace2.box.setCurrentIndex(1)
-        manLayout0.addLayout(self.trace2.layout)
-        self.trace3 = bcwidgets.NamedComboDisp('Plot 3 shows', traceNames)
-        self.trace3.box.setCurrentIndex(2)
-        manLayout0.addLayout(self.trace3.layout)
-        #
-        # Next line is for three buttons
+        # Next line is for four buttons
         #
         line3 = QHBoxLayout()
         # START
@@ -103,46 +127,54 @@ class RPlotter(QWidget):
         self.stopBtn.setEnabled(False)
         self.stopBtn.clicked.connect(self.on_click_stop)
         line3.addWidget(self.stopBtn)
+        # FOURIER
+        self.showBtn = QPushButton("Show Fourier")
+        self.showBtn.setEnabled(False)
+        self.showBtn.clicked.connect(self.on_click_show)
+        line3.addWidget(self.showBtn)
         # SAVE
         self.saveBtn = QPushButton("Save Data")
         self.saveBtn.setEnabled(False)
         self.saveBtn.clicked.connect(self.on_click_save)
         line3.addWidget(self.saveBtn)
-        manLayout0.addLayout(line3)
+        l2.addLayout(line3)
+        manLayout0.addWidget(box2)
         #
-        #   Start a Fourier section
+        #   Start a Single-Shot section
         #
-        fsec = QLabel('Fourier Analyze Data')
-        fsec.setFrameStyle(QFrame.Panel | QFrame.Raised)
-        manLayout0.addWidget(fsec)
-        '''
+        box3 = QGroupBox('Single-shot plotting')
+        l3 = QVBoxLayout()
+        box3.setLayout(l3)
         #
-        #   Top lines have settings and control buttons
+        #   Only duration and sample rate settings
         #
-        oldfSRate = self.srate.value()
-        self.fsrate = bcwidgets.NamedIntEdit('Fourier Sample Rate (sps)',
-                                             oldfSRate)
-        manLayout0.addLayout(self.fsrate.layout)
+        oldFSRate = cfg.inputs_get('SampleRate')
+        self.fsrate = bcwidgets.NamedIntEdit('Sample Rate (sps)', oldFSRate)
+        l3.addLayout(self.fsrate.layout)
         #
-        oldfDur = self.dur.value()
-        self.fdur = bcwidgets.NamedFloatEdit('Data Duration (s)',
-                                             oldfDur)
-        manLayout0.addLayout(self.fdur.layout)
-        '''
+        oldFDur = cfg.inputs_get('LiveDuration')
+        self.fdur = bcwidgets.NamedFloatEdit('Duration (s)', oldFDur)
+        l3.addLayout(self.fdur.layout)
         #
-        # Last line is for collect and save buttons
+        # Next line is for four buttons
         #
-        fline = QHBoxLayout()
+        line3 = QHBoxLayout()
         # START
-        self.fstrtBtn = QPushButton("Analyze/Plot Fourier")
+        self.fstrtBtn = QPushButton("RUN")
         self.fstrtBtn.clicked.connect(self.on_click_fstart)
-        fline.addWidget(self.fstrtBtn)
+        line3.addWidget(self.fstrtBtn)
+        # FOURIER
+        self.fshowBtn = QPushButton("Show Fourier")
+        self.fshowBtn.setEnabled(False)
+        self.fshowBtn.clicked.connect(self.on_click_fshow)
+        line3.addWidget(self.fshowBtn)
         # SAVE
-        self.fsaveBtn = QPushButton("Save Fourier Data")
+        self.fsaveBtn = QPushButton("Save Data")
         self.fsaveBtn.setEnabled(False)
         self.fsaveBtn.clicked.connect(self.on_click_fsave)
-        fline.addWidget(self.fsaveBtn)
-        manLayout0.addLayout(fline)
+        line3.addWidget(self.fsaveBtn)
+        l3.addLayout(line3)
+        manLayout0.addWidget(box3)
         #
         #
         #   Assemble
@@ -179,12 +211,17 @@ class RPlotter(QWidget):
         self.strtBtn.setEnabled(True)
         self.stopBtn.setEnabled(False)
         self.saveBtn.setEnabled(True)
-        self.fstrtBtn.setEnabled(True)
+        self.showBtn.setEnabled(True)
 
     @pyqtSlot()
     def on_click_close(self):
         print('Close plotter')
         self.plotter.hide()
+
+    @pyqtSlot()
+    def on_click_show(self):
+        print('Show Fourier')
+        self._do_fourier()
 
     @pyqtSlot()
     def on_click_save(self):
@@ -197,10 +234,14 @@ class RPlotter(QWidget):
     @pyqtSlot()
     def on_click_fstart(self):
         print('Collect Fourier pressed')
-        self._do_fourier()
-        # self._do_scan(False)
+        self._do_single()
         self.fsaveBtn.setEnabled(True)
-        # self.saveBtn.setEnabled(True)
+        self.fshowBtn.setEnabled(True)
+
+    @pyqtSlot()
+    def on_click_fshow(self):
+        print('Show Fourier in Fourier')
+        self._do_fourier()
 
     @pyqtSlot()
     def on_click_fsave(self):
@@ -270,25 +311,38 @@ class RPlotter(QWidget):
         ftraces = ( self.fv1, self.fv2, self.fvm, 
                     self.fv1mv2, self.fv1pv2, self.fdiv )
         # fmax = 1 + self.dur.value() * self.urate.value() * 0.5
-        fmax = self.urate.value() * 0.5
-        print(len(self.scan.v1), len(self.fv1), fmax)
+        fmax = 0.5/(self.scan.times[1] - self.scan.times[0])
+        print('Fourier', len(self.scan.v1), len(self.fv1), fmax)
         self.freq = np.linspace(0, fmax, len(self.fv1))
         self.plotter.g1.clear()
+        self.plotter.g3.setLabel('bottom', 'Frequency (Hz)')
         self.plotter.g1.enableAutoRange()
-        self.plotter.g1.plot(self.freq, ftraces[self.plots[0]])
+        self.plotter.g1.plot(x=self.freq, 
+                             y=np.log10(ftraces[self.plots[0]]),
+                             name= iscan.IScan.plotNames[0], pen='b',
+                             symbol='o', symbolPen='b',
+                             symbolBrush='b',
+                             symbolSize=2, pxMode=True)
         self.plotter.g2.clear()
         self.plotter.g2.enableAutoRange()
-        self.plotter.g2.plot(self.freq, ftraces[self.plots[1]])
+        self.plotter.g2.plot(self.freq, np.log10(ftraces[self.plots[1]]),
+                             name= iscan.IScan.plotNames[0], pen='g',
+                             symbol='o', symbolPen='g',
+                             symbolBrush='b',
+                             symbolSize=2, pxMode=True)
         self.plotter.g3.clear()
         self.plotter.g3.enableAutoRange()
-        self.plotter.g3.plot(self.freq, ftraces[self.plots[2]])
+        self.plotter.g3.plot(self.freq, np.log10(ftraces[self.plots[2]]),
+                             name= iscan.IScan.plotNames[0], pen='b',
+                             symbol='o', symbolPen='r',
+                             symbolBrush='r',
+                             symbolSize=2, pxMode=True)
     #
     # _do_scan actually takes the data and maintains the plots.
     # It takes one argument that determines whether the scan runs
     # continuously or stops after one iteration.
     #
     def _do_scan(self, multi=True):
-        self.scan = iscan.IScan(self.src)
         # Get params from controls and send to scan
         self.scan.setDuration(self.dur.value())
         print(f'Orig sample rate {self.scan.sample_rate}')
@@ -324,27 +378,32 @@ class RPlotter(QWidget):
         step_dur = time_1s / u_rate
         n_point = int(self.dur.value() * self.urate.value())
         print(self.dur.value(), self.urate.value(), n_point)
-        raw_step_times = np.linspace(0, self.dur.value(), n_point)
+        #raw_step_times = np.linspace(0, self.dur.value(), n_point)
+        tick_rate = ttimer.init()
+        raw_step_times = np.linspace(0, self.dur.value()*tick_rate, n_point,dtype=int)
         n_plot = self.cfg.graphs_get('UpdateRate')
         t_plot = 1.0 / n_plot
         print(f't_plot = {t_plot}')
-        # print(raw_step_times[:5])
-        # print(raw_step_times[-5:])
+        print(raw_step_times[:5])
+        print(raw_step_times[-5:])
         step_idx = 0
         running = True
         #
         # Actual Scan starts here
         #
         while running:
-            t0 = get_time()
+            #t0 = get_time()
+            t0 = ttimer.now()
             step_times = raw_step_times + t0
             pt = t0
             # Do One Scan
             for step_idx in range(n_point):
                 while True:
-                    ct = get_time()
+                    # ct = get_time()
+                    ct = ttimer.now()
                     if ct >= step_times[step_idx]:
                         break
+                # print(ct)
                 if ct > pt:
                     pt = pt + t_plot
                     self.scan.stepScan(True)
@@ -365,7 +424,40 @@ class RPlotter(QWidget):
             self.trace3.show(self.scan.get_avg(idx), self.scan.get_err(idx))
             if not multi or self.stopScan:
                 break
+        #
+        #   Scan ends here.
+        #
+        self.scan.stopScan()
         # execTime = (get_time() - start_time) / time_1s
         # print(f'Left scan loop. {itn} steps took {execTime} s')
         # print(f'scan avg = {s_sums/itn}  process avg = {p_sums/itn}')
         self.scan.dump()
+
+    #
+    #   Run a fast single scan. This is MUCH simpler.
+    #
+    def _do_single(self) -> None:
+        # Clean plotter and connect to scan
+        self.plotter.clear()
+        self.scan.sendPlotsTo(self.plotter)
+        self.plots = [self.trace1.value(), self.trace2.value(),
+                 self.trace3.value()]
+        print(f'plots = {self.plots}')
+        self.scan.plotInPanes(self.plots)
+        self.plotter.show()
+        QApplication.processEvents()
+        # Get params from controls
+        dur = self.fdur.value()
+        print(f'Single sample duration {dur}')
+        rate = self.fsrate.value()
+        print(f'Single sample rate set to {rate}')
+        self.scan.singleScan(dur, rate)
+        # Update statistics
+        idx = self.trace1.value()
+        self.trace1.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+        idx = self.trace2.value()
+        self.trace2.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+        idx = self.trace3.value()
+        self.trace3.show(self.scan.get_avg(idx), self.scan.get_err(idx))
+
+

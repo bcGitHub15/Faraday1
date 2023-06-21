@@ -35,7 +35,7 @@ from datetime import datetime
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QGroupBox,
                              QPushButton, QVBoxLayout, QWidget)
-# from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
+from pyqtgraph import PlotWidget, plot, setConfigOption, ViewBox, mkPen
 # from pyqtgraph import GraphicsLayoutWidget, GraphicsLayout
 #
 #   Support imports
@@ -70,7 +70,8 @@ class RPlotter(QWidget):
         #
         manLayout0 = QVBoxLayout()
         #
-        # First select which traces to plot
+        # First group select which traces to plot and display
+        # the statistics.
         #
         box1 = QGroupBox('Select traces to plot')
         l1 = QVBoxLayout()
@@ -314,29 +315,48 @@ class RPlotter(QWidget):
         fmax = 0.5/(self.scan.times[1] - self.scan.times[0])
         print('Fourier', len(self.scan.v1), len(self.fv1), fmax)
         self.freq = np.linspace(0, fmax, len(self.fv1))
-        self.plotter.g1.clear()
+        n_fin = 600
+
+
+        self.plotter.g3.clear()
+        self.plotter.g3.enableAutoRange(axis=ViewBox.XYAxes)
+        # self.plotter.g3.setXRange(0,5)###
+        print(self.freq[0:2])
+        self.plotter.g3.plot(self.freq[1:n_fin],
+                             # y=np.log10(ftraces[self.plots[2]]),
+                             y=ftraces[self.plots[2]][1:n_fin],
+                             name= iscan.IScan.plotNames[0], pen='r',
+                             symbol='o', symbolPen='r',
+                             symbolBrush='r',
+                             symbolSize=2, pxMode=True)
         self.plotter.g3.setLabel('bottom', 'Frequency (Hz)')
-        self.plotter.g1.enableAutoRange()
-        self.plotter.g1.plot(x=self.freq, 
-                             y=np.log10(ftraces[self.plots[0]]),
+        self.plotter.g3.show()
+        
+        self.plotter.g1.clear()
+        self.plotter.g1.enableAutoRange(axis=ViewBox.XYAxes)
+        # self.plotter.g1.setXRange(0,5)###
+        print(self.freq[0:2])
+        self.plotter.g1.plot(x=self.freq[1:n_fin], 
+                             # y=np.log10(ftraces[self.plots[0]]),
+                             y=ftraces[self.plots[0]][1:n_fin],
                              name= iscan.IScan.plotNames[0], pen='b',
                              symbol='o', symbolPen='b',
                              symbolBrush='b',
                              symbolSize=2, pxMode=True)
+        self.plotter.g1.show()
+        
         self.plotter.g2.clear()
-        self.plotter.g2.enableAutoRange()
-        self.plotter.g2.plot(self.freq, np.log10(ftraces[self.plots[1]]),
+        self.plotter.g2.enableAutoRange(axis=ViewBox.XYAxes)
+        # self.plotter.g2.setXRange(0,5)###
+        print(self.freq[0:2])
+        self.plotter.g2.plot(self.freq[1:n_fin],
+                             # y=np.log10(ftraces[self.plots[1]]),
+                             y=ftraces[self.plots[1]][1:n_fin],
                              name= iscan.IScan.plotNames[0], pen='g',
                              symbol='o', symbolPen='g',
-                             symbolBrush='b',
+                             symbolBrush='g',
                              symbolSize=2, pxMode=True)
-        self.plotter.g3.clear()
-        self.plotter.g3.enableAutoRange()
-        self.plotter.g3.plot(self.freq, np.log10(ftraces[self.plots[2]]),
-                             name= iscan.IScan.plotNames[0], pen='b',
-                             symbol='o', symbolPen='r',
-                             symbolBrush='r',
-                             symbolSize=2, pxMode=True)
+        self.plotter.g2.show()
     #
     # _do_scan actually takes the data and maintains the plots.
     # It takes one argument that determines whether the scan runs

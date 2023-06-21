@@ -99,6 +99,10 @@ class Configurator(QWidget):
         inputLayout.addRow('Live duration (s)', self.dur)
         self.drate = QLineEdit(str(cfg.inputs_get('UpdateRate')))
         inputLayout.addRow('Data update rate (sps)', self.drate)
+        
+        self.xMin = QLineEdit(str(cfg.inputs_get('UpdateRate')))
+        inputLayout.addRow('Data update rate (sps)', self.drate)
+        
         inputPanel.setLayout(inputLayout)
         #
         # Output parameters

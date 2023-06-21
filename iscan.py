@@ -40,7 +40,7 @@ import time
 from voltagesource import VoltageSource
 from threeplotwidget import ThreePlotWidget
 import ttimer
-import nipy
+# import nipy
 
 
 class IScan():
@@ -61,8 +61,7 @@ class IScan():
         self.duration = 0.1      # Will be reset when built
         self.sample_rate = 100_000
         self.n_sample = int(self.sample_rate * self.duration)
-        self.update = 1
-        self.nAverage = 100
+        self.nAverage = 30
         # These control what gets plotted in each pane
         self.pane1 = 0
         self.pane2 = 1
@@ -196,7 +195,7 @@ class IScan():
     #
     # def stepScan(self, do_gap=True) -> bool:
     def stepScan(self, do_plot=True) -> bool:
-        st = ttimer.now()
+        # st = ttimer.now()
         graph_end = False
         #
         # Finally, we can actually run the scan.

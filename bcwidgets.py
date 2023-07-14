@@ -39,6 +39,33 @@ class NamedEdit(QWidget):
 
     def value(self) -> str:
         return self.box.text()
+    
+# ******************************************************************
+#
+#   Widget that combines a label and a read only LineEdit.
+#   Returns string values.
+#
+# ******************************************************************
+class NamedReadOnlyEdit(QWidget):
+    def __init__(self, name: str):
+        print(f'Init NamedEdit({name})')
+        self.label = QLabel(name)
+        self.box = QLineEdit("0.00")
+        self.box.setReadOnly((True))
+        print(self.box)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(self.box)
+
+    def value(self) -> str:
+        return self.box.text()
+    
+    def show(self, val: float):
+        dstr = f'{val:.5f}'
+        self.box.setText(dstr)
+        
+    def showText(self, val: str):
+        self.box.setText(val)
 
 
 # ******************************************************************

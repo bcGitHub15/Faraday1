@@ -290,11 +290,11 @@ class IScan():
         # self.src.single_close()
         pass
     
-    #
-    #   A monolithic scan.
-    #   NOTE that this may take time so we show a please
-    #   wait box.
-    #
+    
+    # A monolithic scan.
+    # NOTE that this may take time so we show a please
+    # wait box.
+          
     def singleScan(self, duration, rate):
         self.setSampleRate(rate)
         self.duration = duration
@@ -303,6 +303,7 @@ class IScan():
         npoint = int(duration * rate)
         print(f'Single collect {npoint} points')
         d = self.src.readN(npoint, tmax=duration+1)
+        self.data = d
         self.times = np.linspace(0, duration, npoint)
         self.v1 = d[0, :]
         self.v2 = d[1, :]
@@ -311,7 +312,7 @@ class IScan():
         self.v1pv2 = self.v1 + self.v2
         self.div = self.v1mv2/self.v1pv2
         self.traces = (self.v1, self.v2, self.vm,
-                       self.v1mv2, self.v1pv2, self.div)
+                        self.v1mv2, self.v1pv2, self.div)
         #
         #   Get scaling
         #
@@ -345,23 +346,93 @@ class IScan():
             print('Using 3-trace plotter')
             print(self.pane1, self.pane2, self.pane3)
             self.plotter.g1.plot(x=self.times,
-                                 y=self.traces[self.pane1],
-                                 name= IScan.plotNames[0], pen='b',
-                                 symbol='o', symbolPen='b',
-                                 symbolBrush='b',
-                                 symbolSize=2, pxMode=True)
+                                  y=self.traces[self.pane1],
+                                  name= IScan.plotNames[0], pen='b',
+                                  symbol='o', symbolPen='b',
+                                  symbolBrush='b',
+                                  symbolSize=2, pxMode=True)
             self.plotter.g2.plot(x=self.times,
-                                 y=self.traces[self.pane2],
-                                 name= IScan.plotNames[1], pen='g',
-                                 symbol='o', symbolPen='g',
-                                 symbolBrush='g',
-                                 symbolSize=2, pxMode=True)
+                                  y=self.traces[self.pane2],
+                                  name= IScan.plotNames[1], pen='g',
+                                  symbol='o', symbolPen='g',
+                                  symbolBrush='g',
+                                  symbolSize=2, pxMode=True)
             self.plotter.g3.plot(x=self.times,
-                                 y=self.traces[self.pane3],
-                                 name= IScan.plotNames[2], pen='r',
-                                 symbol='o', symbolPen='r',
-                                 symbolBrush='r',
-                                 symbolSize=2, pxMode=True)
+                                  y=self.traces[self.pane3],
+                                  name= IScan.plotNames[2], pen='r',
+                                  symbol='o', symbolPen='r',
+                                  symbolBrush='r',
+                                  symbolSize=2, pxMode=True)
+            
+    # Description: Works the same as singleScan except data is passed as a parameter so that this function only handles plotting,
+    #              NOT data acqusition AND plotting.
+    # Parameter, duration: A numeric represeting the duration of the scan in seconds
+    # Parameter, rate: An integer representing the sample rate of the NI board
+    # Parameter, data: A signal array containing 2 elements, an x and a y data array.
+    def singleScanPlot(self, duration, rate, data):
+
+        npoint = int(duration * rate)
+        d = data
+            
+        self.times = np.linspace(0, duration, npoint)
+        self.v1 = d[0, :]
+        self.v2 = d[1, :]
+        self.vm = d[2, :]
+        self.v1mv2 = self.v1 - self.v2
+        self.v1pv2 = self.v1 + self.v2
+        self.div = self.v1mv2/self.v1pv2
+        self.traces = (self.v1, self.v2, self.vm,
+                        self.v1mv2, self.v1pv2, self.div)
+        #
+        #   Get scaling
+        #
+        mx1 = np.max(self.traces[self.pane1])
+        mn1 = np.min(self.traces[self.pane1])
+        r1 = 0.55*(mx1-mn1)
+        a1 = 0.5*(mx1+mn1)
+        self.plotter.g1.setYRange(a1-r1, a1+r1)
+        mx2 = np.max(self.traces[self.pane2])
+        mn2 = np.min(self.traces[self.pane2])
+        r2 = 0.55*(mx2-mn2)
+        a2 = 0.5*(mx2+mn2)
+        self.plotter.g2.setYRange(a2-r2, a2+r2)
+        mx3 = np.max(self.traces[self.pane3])
+        mn3 = np.min(self.traces[self.pane3])
+        r3 = 0.55*(mx3-mn3)
+        a3 = 0.5*(mx3+mn3)
+        self.plotter.g3.setYRange(a3-r3, a3+r3)
+        self.plotter.setXRangeLabel(0.0, duration, 'Time (s)')
+        # Save averages and std. devs.
+        for i in range(6):
+            self.gvals[i] = np.average(self.traces[i])
+            self.gerrs[i] = np.std(self.traces[i])
+        #
+        #   Plot with titles and styles
+        #
+        if self.plotter:
+            self.plotter.g1.clear()
+            self.plotter.g2.clear()
+            self.plotter.g3.clear()
+            print('Using 3-trace plotter')
+            print(self.pane1, self.pane2, self.pane3)
+            self.plotter.g1.plot(x=self.times,
+                                  y=self.traces[self.pane1],
+                                  name= IScan.plotNames[0], pen='b',
+                                  symbol='o', symbolPen='b',
+                                  symbolBrush='b',
+                                  symbolSize=2, pxMode=True)
+            self.plotter.g2.plot(x=self.times,
+                                  y=self.traces[self.pane2],
+                                  name= IScan.plotNames[1], pen='g',
+                                  symbol='o', symbolPen='g',
+                                  symbolBrush='g',
+                                  symbolSize=2, pxMode=True)
+            self.plotter.g3.plot(x=self.times,
+                                  y=self.traces[self.pane3],
+                                  name= IScan.plotNames[2], pen='r',
+                                  symbol='o', symbolPen='r',
+                                  symbolBrush='r',
+                                  symbolSize=2, pxMode=True)
 
     def get_err(self, idx: int) -> float:
         return self.gerrs[idx]

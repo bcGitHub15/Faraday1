@@ -139,12 +139,12 @@ class NidaqmxSource:
     def readN(self, n2read: int, tmax=2) -> np.ndarray:
         data = np.zeros((self.n_chan, n2read))
         self.task.timing.cfg_samp_clk_timing(self.sample_rate,
-                                             sample_mode=AcquisitionType.FINITE,
-                                             samps_per_chan=n2read)
+                                              sample_mode=AcquisitionType.FINITE,
+                                              samps_per_chan=n2read)
         self.task.start()
         self.reader.read_many_sample(data,
-                                     number_of_samples_per_channel=n2read,
-                                     timeout=tmax)
+                                      number_of_samples_per_channel=n2read,
+                                      timeout=tmax)
         self.task.stop()
         return data
     

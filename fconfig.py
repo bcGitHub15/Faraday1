@@ -16,6 +16,7 @@ class FConfig:
     def __init__(self):
         # inputs section
         self._inDict = {'InDev': 'Dev2'}
+        self._inDict['test'] = 'testing'
         self._inDict['V1Chan'] = 'ai0'
         self._inDict['V2Chan'] = 'ai1'
         self._inDict['VMChan'] = 'ai2'
@@ -23,6 +24,8 @@ class FConfig:
         self._inDict['LiveDuration'] = 10.0
         self._inDict['UpdateRate'] = 10.0
         self._inDict['NAverage'] = 10.0
+        self._inDict['LXLimit'] = 0
+        self._inDict['RXLimit'] = 0
 
         # outputs section
         self._outDict = {'OutDev': 'Dev1'}
@@ -44,9 +47,8 @@ class FConfig:
         return self._config[key]
 
     def inputs_get(self, key):
-        print(key)
-        print(self._inDict)
-        print(self._config['inputs'][key])
+        #print(self._config['inputs'])
+        #print(self._config['inputs'][key])
         return self._config['inputs'][key]
 
     def outputs_get(self, key):
